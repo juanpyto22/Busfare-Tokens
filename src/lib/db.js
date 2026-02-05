@@ -1361,6 +1361,44 @@ export const db = {
     })
     
     return { success: true, prize }
+  },
+
+  // ==================== FUNCIONES ONLINE ====================
+  
+  // Actualizar usuario como online
+  updateOnlineStatus: async () => {
+    try {
+      const { error } = await supabase.rpc('update_online_users')
+      if (error) throw error
+      return { success: true }
+    } catch (error) {
+      console.error('Error updating online status:', error)
+      return { success: false, error: error.message }
+    }
+  },
+
+  // Obtener usuarios online
+  getOnlineUsers: async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_online_users')
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error getting online users:', error)
+      return []
+    }
+  },
+
+  // Obtener estadísticas globales
+  getGlobalStats: async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_global_stats')
+      if (error) throw error
+      return data || {}
+    } catch (error) {
+      console.error('Error getting global stats:', error)
+      return {}
+    }
   }
 }
 

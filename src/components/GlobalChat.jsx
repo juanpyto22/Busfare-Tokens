@@ -56,22 +56,14 @@ const GlobalChat = () => {
 
     const updateOnlineUsers = async () => {
         try {
-            const users = await db.getAllUsers();
-            const now = Date.now();
-            const fiveMinutesAgo = now - 5 * 60 * 1000;
-
-            // Filtrar usuarios que han estado activos en los últimos 5 minutos
-            const online = users.filter(user => {
-                const lastActive = localStorage.getItem(`user_last_active_${user.id}`);
-                return lastActive && parseInt(lastActive) > fiveMinutesAgo;
-            });
-
-            setOnlineUsers(online);
-
-            // Actualizar última actividad del usuario actual
+            // Actualizar estado online del usuario actual
             if (session) {
-                localStorage.setItem(`user_last_active_${session.id}`, now.toString());
+                await db.updateOnlineStatus();
             }
+            
+            // Obtener lista de usuarios online
+            const users = await db.getOnlineUsers();
+            setOnlineUsers(users);
         } catch (error) {
             console.error('Error updating online users:', error);
         }
