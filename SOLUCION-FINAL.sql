@@ -44,9 +44,12 @@ END $$;
 -- ============================================= 
 -- PASO 3: ELIMINAR USUARIOS EXISTENTES
 -- =============================================
-DELETE FROM public.users WHERE email IN ('admin@busfare.com') OR email LIKE 'arbitro%@busfare.com';
-DELETE FROM auth.users WHERE email IN ('admin@busfare.com') OR email LIKE 'arbitro%@busfare.com';
-RAISE NOTICE 'Usuarios admin/árbitros eliminados';
+DO $$
+BEGIN
+  DELETE FROM public.users WHERE email IN ('admin@busfare.com') OR email LIKE 'arbitro%@busfare.com';
+  DELETE FROM auth.users WHERE email IN ('admin@busfare.com') OR email LIKE 'arbitro%@busfare.com';
+  RAISE NOTICE 'Usuarios admin/árbitros eliminados';
+END $$;
 
 -- ============================================= 
 -- PASO 4: CREAR FUNCIONES RPC
@@ -107,7 +110,10 @@ BEGIN
 END;
 $$;
 
-RAISE NOTICE 'Funciones RPC creadas correctamente';
+DO $$
+BEGIN
+  RAISE NOTICE 'Funciones RPC creadas correctamente';
+END $$;
 
 -- ============================================= 
 -- PASO 5: CREAR USUARIO ADMIN
@@ -312,7 +318,10 @@ CREATE POLICY "allow_delete_by_admin"
     )
   );
 
-RAISE NOTICE 'Políticas RLS configuradas correctamente';
+DO $$
+BEGIN
+  RAISE NOTICE 'Políticas RLS configuradas correctamente';
+END $$;
 
 -- ============================================= 
 -- PASO 8: VERIFICAR TODO ESTÁ OK
