@@ -1211,42 +1211,17 @@ export const db = {
     return data || []
   },
   
-  // Estadísticas globales (admin)
-  getGlobalStats: async () => {
-    const stats = await db.getStats()
-    
-    // Agregar estadísticas adicionales
-    const { data: totalTokens } = await supabase
-      .from('users')
-      .select('tokens')
-    
-    const totalTokensInSystem = totalTokens?.reduce((sum, u) => sum + (u.tokens || 0), 0) || 0
-    
-    const { data: recentUsers } = await supabase
-      .from('users')
-      .select('created_at')
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-    
-    const { data: pendingWithdrawals } = await supabase
-      .from('withdrawals')
-      .select('amount')
-      .eq('status', 'pending')
-    
-    const pendingWithdrawalAmount = pendingWithdrawals?.reduce((sum, w) => sum + parseFloat(w.amount), 0) || 0
-    
-    const { data: completedWithdrawals } = await supabase
-      .from('withdrawals')
-      .select('amount')
-      .eq('status', 'completed')
-    
-    const totalWithdrawn = completedWithdrawals?.reduce((sum, w) => sum + parseFloat(w.amount), 0) || 0
-    
-    return {
-      ...stats,
-      totalTokensInSystem,
-      newUsersThisWeek: recentUsers?.length || 0,
-      pendingWithdrawalAmount,
-      totalWithdrawn
+  // Estadísticas globales usando RPC (admin)
+  getGlobalStatsAdmin: async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_global_stats')
+      if (error) throw error
+      return data || {}
+    } catch (error) {
+      console.error('Error getting global stats:', error)
+      // Fallback
+      const stats = await db.getStats()
+      return stats
     }
   },
   
