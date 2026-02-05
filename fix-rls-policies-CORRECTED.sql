@@ -120,7 +120,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
   INSERT INTO public.users (id, email, username, tokens)
-  VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)), 100);
+  VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)), 1);
   RETURN NEW;
 EXCEPTION
   WHEN unique_violation THEN
