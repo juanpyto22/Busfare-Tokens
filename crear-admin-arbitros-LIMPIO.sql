@@ -56,9 +56,18 @@ BEGIN
         ''
     ) RETURNING id INTO admin_id;
 
-    -- Crear perfil del admin en users
-    INSERT INTO public.users (id, email, username, role, tokens, level, reputation, trust_score, email_verified)
-    VALUES (admin_id, 'admin@busfare.com', 'admin', 'admin', 99999, 99, 100, 100, true);
+    -- Esperar a que el trigger cree el perfil
+    PERFORM pg_sleep(0.5);
+
+    -- Actualizar perfil del admin en users (el trigger ya lo creó)
+    UPDATE public.users 
+    SET role = 'admin', 
+        tokens = 99999, 
+        level = 99, 
+        reputation = 100, 
+        trust_score = 100, 
+        email_verified = true
+    WHERE id = admin_id;
 
     RAISE NOTICE 'Admin creado: admin@busfare.com / Admin123!';
 END $$;
@@ -108,9 +117,18 @@ BEGIN
             ''
         ) RETURNING id INTO arbitro_id;
 
-        -- Crear perfil del árbitro en users
-        INSERT INTO public.users (id, email, username, role, tokens, level, reputation, trust_score, email_verified)
-        VALUES (arbitro_id, 'arbitro' || i || '@busfare.com', 'arbitro' || i, 'moderator', 5000, 50, 100, 100, true);
+        -- Esperar a que el trigger cree el perfil
+        PERFORM pg_sleep(0.5);
+
+        -- Actualizar perfil del árbitro en users (el trigger ya lo creó)
+        UPDATE public.users 
+        SET role = 'moderator', 
+            tokens = 5000, 
+            level = 50, 
+            reputation = 100, 
+            trust_score = 100, 
+            email_verified = true
+        WHERE id = arbitro_id;
 
         RAISE NOTICE 'Árbitro % creado: arbitro%@busfare.com / Arbitro123!', i, i;
     END LOOP;
