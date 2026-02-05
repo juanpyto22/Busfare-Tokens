@@ -19,7 +19,7 @@ export const db = {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', data.user.id)
+        .eq('user_id', data.user.id)
         .single()
       
       if (userError) throw userError
@@ -27,7 +27,7 @@ export const db = {
       // Actualizar último login
       await supabase.from('users').update({ 
         last_login: new Date().toISOString() 
-      }).eq('id', data.user.id)
+      }).eq('user_id', data.user.id)
       
       // Guardar sesión en localStorage para compatibilidad
       localStorage.setItem('fortnite_platform_session', JSON.stringify(userData))
@@ -62,29 +62,17 @@ export const db = {
       
       if (authError) throw authError
       
-      // Esperar y reintentar hasta 5 veces para obtener el usuario creado por el trigger
-      let userData = null
-      let attempts = 0
-      const maxAttempts = 5
+      // Esperar a que el trigger cree el usuario
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
-      while (attempts < maxAttempts && !userData) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authData.user.id)
-          .single()
-        
-        if (!error && data) {
-          userData = data
-          break
-        }
-        
-        attempts++
-      }
+      // Obtener el usuario creado por el trigger
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single()
       
-      if (!userData) {
+      if (userError) {
         throw new Error('Usuario creado pero no se pudo obtener el perfil. Intenta iniciar sesión.')
       }
       
@@ -1211,17 +1199,42 @@ export const db = {
     return data || []
   },
   
-  // Estadísticas globales usando RPC (admin)
-  getGlobalStatsAdmin: async () => {
-    try {
-      const { data, error } = await supabase.rpc('get_global_stats')
-      if (error) throw error
-      return data || {}
-    } catch (error) {
-      console.error('Error getting global stats:', error)
-      // Fallback
-      const stats = await db.getStats()
-      return stats
+  // Estadísticas globales (admin)
+  getGlobalStats: async () => {
+    const stats = await db.getStats()
+    
+    // Agregar estadísticas adicionales
+    const { data: totalTokens } = await supabase
+      .from('users')
+      .select('tokens')
+    
+    const totalTokensInSystem = totalTokens?.reduce((sum, u) => sum + (u.tokens || 0), 0) || 0
+    
+    const { data: recentUsers } = await supabase
+      .from('users')
+      .select('created_at')
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    
+    const { data: pendingWithdrawals } = await supabase
+      .from('withdrawals')
+      .select('amount')
+      .eq('status', 'pending')
+    
+    const pendingWithdrawalAmount = pendingWithdrawals?.reduce((sum, w) => sum + parseFloat(w.amount), 0) || 0
+    
+    const { data: completedWithdrawals } = await supabase
+      .from('withdrawals')
+      .select('amount')
+      .eq('status', 'completed')
+    
+    const totalWithdrawn = completedWithdrawals?.reduce((sum, w) => sum + parseFloat(w.amount), 0) || 0
+    
+    return {
+      ...stats,
+      totalTokensInSystem,
+      newUsersThisWeek: recentUsers?.length || 0,
+      pendingWithdrawalAmount,
+      totalWithdrawn
     }
   },
   
@@ -1336,44 +1349,6 @@ export const db = {
     })
     
     return { success: true, prize }
-  },
-
-  // ==================== FUNCIONES ONLINE ====================
-  
-  // Actualizar usuario como online
-  updateOnlineStatus: async () => {
-    try {
-      const { error } = await supabase.rpc('update_online_users')
-      if (error) throw error
-      return { success: true }
-    } catch (error) {
-      console.error('Error updating online status:', error)
-      return { success: false, error: error.message }
-    }
-  },
-
-  // Obtener usuarios online
-  getOnlineUsers: async () => {
-    try {
-      const { data, error } = await supabase.rpc('get_online_users')
-      if (error) throw error
-      return data || []
-    } catch (error) {
-      console.error('Error getting online users:', error)
-      return []
-    }
-  },
-
-  // Obtener estadísticas globales
-  getGlobalStats: async () => {
-    try {
-      const { data, error } = await supabase.rpc('get_global_stats')
-      if (error) throw error
-      return data || {}
-    } catch (error) {
-      console.error('Error getting global stats:', error)
-      return {}
-    }
   }
 }
 
