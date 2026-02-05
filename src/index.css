@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 216 100% 3%;
+    --foreground: 210 40% 98%;
+
+    --card: 217 33% 8%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 217 33% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 12%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 12%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 15%;
+    --input: 217 33% 15%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Dark Blue Theme - Modo Oscuro Profesional */
+body {
+  background: linear-gradient(135deg, #050911 0%, #0a1628 50%, #050911 100%);
+  background-attachment: fixed;
+  color: #e5e7eb;
+  overflow-x: hidden;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a1628;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #1e40af, #3b82f6);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #2563eb, #60a5fa);
+}
+
+/* Efectos de brillo azul */
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(96, 165, 250, 0.8);
+}
+
+/* Animaciones suaves */
+@keyframes pulse-blue {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+}
+
+.animate-pulse-blue {
+  animation: pulse-blue 2s infinite;
+}

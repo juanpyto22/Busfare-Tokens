@@ -1,0 +1,21 @@
+# Render deployment configuration
+# Use this if deploying to Render instead of Railway
+
+services:
+  - type: web
+    name: tokens-backend
+    env: node
+    region: frankfurt  # Cambia según tu región
+    plan: free  # O 'starter' para $7/mes
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: STRIPE_SECRET_KEY
+        sync: false  # Configurar manualmente en Render dashboard
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+    healthCheckPath: /
