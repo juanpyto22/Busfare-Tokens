@@ -62,17 +62,29 @@ export const db = {
       
       if (authError) throw authError
       
-      // Esperar a que el trigger cree el usuario
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Esperar y reintentar hasta 5 veces para obtener el usuario creado por el trigger
+      let userData = null
+      let attempts = 0
+      const maxAttempts = 5
       
-      // Obtener el usuario creado por el trigger
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single()
+      while (attempts < maxAttempts && !userData) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authData.user.id)
+          .single()
+        
+        if (!error && data) {
+          userData = data
+          break
+        }
+        
+        attempts++
+      }
       
-      if (userError) {
+      if (!userData) {
         throw new Error('Usuario creado pero no se pudo obtener el perfil. Intenta iniciar sesión.')
       }
       
