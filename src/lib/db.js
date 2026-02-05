@@ -19,7 +19,7 @@ export const db = {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('user_id', data.user.id)
+        .eq('id', data.user.id)
         .single()
       
       if (userError) throw userError
@@ -27,7 +27,7 @@ export const db = {
       // Actualizar último login
       await supabase.from('users').update({ 
         last_login: new Date().toISOString() 
-      }).eq('user_id', data.user.id)
+      }).eq('id', data.user.id)
       
       // Guardar sesión en localStorage para compatibilidad
       localStorage.setItem('fortnite_platform_session', JSON.stringify(userData))
