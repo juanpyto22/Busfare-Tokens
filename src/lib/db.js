@@ -189,10 +189,22 @@ export const db = {
           }
         }
 
-      if (error) return null
-      return data
+      console.log('✅ REGISTRO EXITOSO - Datos retornados:', {
+        id: userData?.id,
+        username: userData?.username,
+        email: userData?.email,
+        tokens: userData?.tokens
+      })
+
+      // Guardar sesión en localStorage igual que en login()
+      if (userData) {
+        localStorage.setItem('fortnite_platform_session', JSON.stringify(userData))
+      }
+
+      return userData
     } catch (error) {
-      return null
+      console.error('❌ Error en register():', error)
+      throw error
     }
   },
 
