@@ -174,40 +174,21 @@ export const db = {
         userData = insertedUser
       }
 
-      // Guardar sesión en localStorage
-      localStorage.setItem('fortnite_platform_session', JSON.stringify(userData))
-      
-      return userData
-    } catch (error) {
-      console.error('Error en registro:', error)
-      throw new Error(error.message || 'Error al registrarse')
-    }
-  },
+        // 🔄 LECTURA FINAL: Garantizar que retornamos TODOS los datos del usuario
+        if (userData && userData.id) {
+          const { data: finalUserData, error: finalError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userData.id)
+            .single()
+          
+          if (finalError) {
+            console.error('Error en lectura final:', finalError)
+          } else if (finalUserData) {
+            userData = finalUserData
+          }
+        }
 
-  logout: async () => {
-    // Limpiar localStorage
-    localStorage.removeItem('fortnite_platform_session')
-    await signOut()
-  },
-
-  getSession: () => {
-    // Función síncrona para compatibilidad con código antiguo
-    // Retorna el usuario guardado en localStorage si existe
-    const sessionData = localStorage.getItem('fortnite_platform_session');
-    return sessionData ? JSON.parse(sessionData) : null;
-  },
-
-  getCurrentUser: async () => {
-    try {
-      const session = await getCurrentSession()
-      if (!session) return null
-      
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-      
       if (error) return null
       return data
     } catch (error) {
