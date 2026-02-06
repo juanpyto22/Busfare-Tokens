@@ -208,6 +208,26 @@ export const db = {
     }
   },
 
+  // ==================== SESSION ====================
+
+  getSession: () => {
+    try {
+      const session = localStorage.getItem('fortnite_platform_session')
+      if (!session) return null
+      const userData = JSON.parse(session)
+      console.log('📋 Sesión cargada del localStorage:', {
+        id: userData?.id,
+        username: userData?.username,
+        tokens: userData?.tokens,
+        email: userData?.email
+      })
+      return userData
+    } catch (error) {
+      console.error('Error al cargar sesión:', error)
+      return null
+    }
+  },
+
   // ==================== USERS ====================
 
   getUserById: async (userId) => {
