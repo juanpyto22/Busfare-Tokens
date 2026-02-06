@@ -191,10 +191,31 @@ const Matches = () => {
             return;
         }
 
+        // 🔄 REFRESCAR DATOS DEL USUARIO DESDE SUPABASE
+        let currentUser = user;
+        try {
+            let freshUserData = null;
+            // Primero intentar con getCurrentUser
+            freshUserData = await db.getCurrentUser();
+            // Si falla, usar getUserById con el ID del localStorage
+            if (!freshUserData && user?.id) {
+                freshUserData = await db.getUserById(user.id);
+            }
+            
+            if (freshUserData) {
+                currentUser = freshUserData;
+                setUser(freshUserData);
+                localStorage.setItem('fortnite_platform_session', JSON.stringify(freshUserData));
+            }
+        } catch (error) {
+            console.error('Error refrescando usuario:', error);
+            // Continuar con los datos que tengamos
+        }
+
         // Verificar si el usuario ya está en un match activo
         const allMatches = await db.getMatches();
         const userActiveMatch = allMatches.find(m => 
-            m.players.some(p => p.id === user.id) && 
+            m.players.some(p => p.id === currentUser.id) && 
             (m.status === 'waiting' || m.status === 'ready' || m.status === 'started')
         );
         
@@ -243,8 +264,8 @@ const Matches = () => {
             return;
         }
 
-        // Verificar que el usuario tenga suficientes tokens
-        const userBalance = user?.tokens || 0;
+        // Verificar que el usuario tenga suficientes tokens - USA currentUser ACTUALIZADO
+        const userBalance = currentUser?.tokens || 0;
         
         // Validar mínimo de entrada
         if (newMatch.entryFee < 0.5) {
