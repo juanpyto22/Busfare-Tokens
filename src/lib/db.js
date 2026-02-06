@@ -8,95 +8,171 @@ export const db = {
   
   login: async (email, password) => {
     try {
+      if (!email || !password) {
+        throw new Error('Email y contraseña son requeridos')
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
       
-      if (error) throw error
+      if (error) {
+        if (error.message?.includes('Invalid login credentials')) {
+          throw new Error('Email o contraseña incorrectos')
+        }
+        if (error.message?.includes('Email not confirmed')) {
+          throw new Error('Email no verificado. Revisa tu bandeja de entrada.')
+        }
+        throw new Error(error.message || 'Error al iniciar sesión')
+      }
+
+      if (!data.user) {
+        throw new Error('No se pudo iniciar sesión')
+      }
       
       // Obtener datos completos del usuario
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', data.user.id)
-        .single()
+        .maybeSingle()
       
-      if (userError) throw userError
+      if (userError) {
+        throw new Error('Error al obtener datos del perfil')
+      }
+
+      if (!userData) {
+        throw new Error('Usuario no encontrado en la base de datos')
+      }
       
       // Actualizar último login
       await supabase.from('users').update({ 
         last_login: new Date().toISOString() 
       }).eq('id', data.user.id)
       
-      // Guardar sesión en localStorage para compatibilidad
+      // Guardar sesión en localStorage
       localStorage.setItem('fortnite_platform_session', JSON.stringify(userData))
       
       return userData
     } catch (error) {
+      console.error('Error en login:', error)
       throw new Error(error.message || 'Error al iniciar sesión')
     }
   },
 
   register: async (email, password, username) => {
     try {
-      // Verificar si el username ya existe
-      const { data: existingUser } = await supabase
+      // Validar que los campos no estén vacíos
+      if (!email || !password || !username) {
+        throw new Error('Email, contraseña y nombre de usuario son requeridos')
+      }
+      
+      // Validar que la contraseña tenga mínimo 8 caracteres
+      if (password.length < 8) {
+        throw new Error('La contraseña debe tener mínimo 8 caracteres')
+      }
+
+      // Verificar si el email ya existe (en auth)
+      const { data: authUsers } = await supabase.auth.admin.listUsers()
+      const emailExists = authUsers?.users?.some(u => u.email === email)
+      
+      if (emailExists) {
+        throw new Error('El email ya está registrado')
+      }
+
+      // Verificar si el username ya existe (en public.users)
+      const { data: existingUser, error: checkError } = await supabase
         .from('users')
-        .select('username')
+        .select('id')
         .eq('username', username)
-        .single()
+        .maybeSingle()
       
       if (existingUser) {
         throw new Error('El nombre de usuario ya existe')
       }
 
-      // Crear usuario en Auth (el trigger se encarga del resto)
+      // Crear usuario en Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { username }
+          data: { username },
+          emailRedirectTo: `${window.location.origin}/verify-email`
         }
       })
       
-      if (authError) throw authError
-      
-      // Esperar a que el trigger cree el usuario
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Obtener el usuario creado por el trigger
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single()
-      
-      if (userError) {
-        throw new Error('Usuario creado pero no se pudo obtener el perfil. Intenta iniciar sesión.')
+      if (authError) {
+        if (authError.message?.includes('already registered')) {
+          throw new Error('El email ya está registrado')
+        }
+        throw new Error(authError.message || 'Error al crear la cuenta')
       }
-      
-      // Actualizar el username si es diferente
-      if (userData.username !== username) {
-        const { data: updatedUser, error: updateError } = await supabase
+
+      if (!authData.user) {
+        throw new Error('No se pudo crear la cuenta')
+      }
+
+      // Esperar a que el trigger cree el usuario en public.users
+      let userData = null
+      let attempts = 0
+      const maxAttempts = 5
+
+      while (!userData && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        const { data, error } = await supabase
           .from('users')
-          .update({ username })
+          .select('*')
           .eq('id', authData.user.id)
+          .maybeSingle()
+        
+        if (!error && data) {
+          userData = data
+        }
+        attempts++
+      }
+
+      if (!userData) {
+        // Intentar insertar manualmente si el trigger no funcionó
+        const { data: insertedUser, error: insertError } = await supabase
+          .from('users')
+          .insert([{
+            id: authData.user.id,
+            email,
+            username,
+            role: 'user',
+            tokens: 100,
+            level: 1,
+            wins: 0,
+            losses: 0,
+            total_played: 0,
+            earnings: 0,
+            total_earned: 0,
+            reputation: 50,
+            trust_score: 50,
+            current_streak: 0,
+            best_streak: 0,
+            email_verified: false,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
           .select()
           .single()
         
-        if (updateError) throw updateError
-        
-        // Guardar sesión en localStorage para compatibilidad
-        localStorage.setItem('fortnite_platform_session', JSON.stringify(updatedUser))
-        return updatedUser
+        if (insertError) {
+          throw new Error('Usuario creado pero no se pudo guardar el perfil. Intenta iniciar sesión.')
+        }
+        userData = insertedUser
       }
-      
-      // Guardar sesión en localStorage para compatibilidad
+
+      // Guardar sesión en localStorage
       localStorage.setItem('fortnite_platform_session', JSON.stringify(userData))
       
       return userData
     } catch (error) {
+      console.error('Error en registro:', error)
       throw new Error(error.message || 'Error al registrarse')
     }
   },
