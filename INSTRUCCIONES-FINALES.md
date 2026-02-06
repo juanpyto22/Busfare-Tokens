@@ -64,23 +64,18 @@ PASO 4️⃣: EJECUTAR SQL (En SupaBase SQL Editor)
 
 1. Ve a: SQL Editor (en la barra izquierda de Supabase)
 2. Haz clic en: "New Query" o "+" (para nueva query)
-3. Abre el archivo: SETUP-FINAL-COMPLETO.sql
-4. Copia TODO el contenido desde aquí:
-   
-   -- PASO 5: CREAR USUARIOS EN public.users
-   
-   Hasta el final del archivo.
-
+3. Abre el archivo: SETUP-FINAL-SEGURO.sql
+4. Copia TODO el contenido
 5. Pégalo en el SQL Editor
 6. Haz clic en: "Run" o ▶ (botón de ejecutar)
 
-Deberías ver al final:
-┌────────┬─────────────────────┬──────────────┬──────────┐
-│ id     │ email               │ username     │ role     │
-├────────┼─────────────────────┼──────────────┼──────────┤
-│ ...    │ admin@busfare.com   │ admin_user   │ admin    │
-│ ...    │ arbitro@busfare.com │ arbitro_user │ moderator│
-└────────┴─────────────────────┴──────────────┴──────────┘
+Deberías ver al final la tabla con admin y arbitro:
+┌────────────┬─────────────────────┬──────────────┬──────────┐
+│ id         │ email               │ username     │ role     │
+├────────────┼─────────────────────┼──────────────┼──────────┤
+│ ...        │ admin@busfare.com   │ admin_user   │ admin    │
+│ ...        │ arbitro@busfare.com │ arbitro_user │ moderator│
+└────────────┴─────────────────────┴──────────────┴──────────┘
 
 ✅ Si ves eso, está correcto.
 
@@ -182,7 +177,7 @@ PASO 9️⃣: DEPLOY EN VERCEL (Opcional)
 ⬜ PASO 1: Limpiado auth.users (todos borrados)
 ⬜ PASO 2: Creado admin@busfare.com en auth.users
 ⬜ PASO 3: Creado arbitro@busfare.com en auth.users
-⬜ PASO 4: Ejecutado SQL (SETUP-FINAL-COMPLETO.sql)
+⬜ PASO 4: Ejecutado SQL (SETUP-FINAL-SEGURO.sql) ⭐
 ⬜ PASO 5: Verificado que hay 2 usuarios en public.users
 ⬜ PASO 6: Actualizado .env local
 ⬜ PASO 7: Probado login/register en localhost:3000
@@ -210,9 +205,11 @@ PASO 9️⃣: DEPLOY EN VERCEL (Opcional)
      En console: localStorage.clear()
 
 ❌ El SQL da error
-   → Verifica que ya creaste los usuarios en auth.users PRIMERO
-   → Copia TODO el contenido desde "PASO 5" del SQL
-   → No ejecutes partes que digan "MANUAL"
+   → ¿Dice "relation ... does not exist"?
+   → Eso significa que una tabla no existe, pero el SQL lo maneja ✅
+   → Intenta ejecutar el SQL nuevamente desde el inicio
+   → Verifica que los usuarios existen en auth.users (PRIMERO)
+   → Usa el archivo: SETUP-FINAL-SEGURO.sql (el de nombre "SEGURO")
 
 ═══════════════════════════════════════════════════════════════════
 

@@ -22,7 +22,7 @@ PASO 2️⃣: CREAR admin@busfare.com y arbitro@busfare.com
      → 3 minutos
 
 PASO 3️⃣: EJECUTAR SQL en Supabase
-     (Copiar y ejecutar SETUP-FINAL-COMPLETO.sql)
+     (Copiar y ejecutar SETUP-FINAL-SEGURO.sql)
      → 1 minuto
 
 PASO 4️⃣: PROBAR login/register en localhost
@@ -46,8 +46,8 @@ dónde escribir, y qué deberías ver como resultado.
 INSTRUCCIONES-FINALES.md
   └─ LEER PRIMERO. Paso a paso visual para arreglarlo TODO.
 
-SETUP-FINAL-COMPLETO.sql
-  └─ El SQL que debes ejecutar en Supabase SQL Editor.
+SETUP-FINAL-SEGURO.sql
+  └─ El SQL que debes ejecutar en Supabase SQL Editor. ⭐
 
 src/lib/db.js
   └─ Ya está arreglado ✅. Login/register mejorados.
