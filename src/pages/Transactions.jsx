@@ -13,13 +13,24 @@ const Transactions = () => {
     const [filter, setFilter] = useState('all'); // all, purchase, withdrawal, match, tip
 
     useEffect(() => {
-        const session = db.getSession();
-        if (!session) {
-            navigate('/login');
-            return;
-        }
-        setUser(session);
-        setTransactions(session.transactions || []);
+        const loadTransactions = async () => {
+            const session = db.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+            setUser(session);
+            
+            try {
+                const txData = await db.getTransactions(session.id);
+                setTransactions(txData || []);
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                setTransactions([]);
+            }
+        };
+        
+        loadTransactions();
     }, [navigate]);
 
     const getFilteredTransactions = () => {

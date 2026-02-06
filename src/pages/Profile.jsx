@@ -34,30 +34,38 @@ const Profile = () => {
     const [tipLoading, setTipLoading] = useState(false);
 
     useEffect(() => {
-        const session = db.getSession();
-        if (!session) {
-            navigate('/login');
-            return;
-        }
-        setUser(session);
-        setUsername(session.username);
-        setEmail(session.email);
+        const loadProfileData = async () => {
+            const session = db.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+            setUser(session);
+            setUsername(session.username);
+            setEmail(session.email);
+            
+            const savedLinks = JSON.parse(localStorage.getItem(`social_links_${session.id}`) || '{}');
+            setEpicGamesName(savedLinks.epicGames || '');
+            setDiscordUsername(savedLinks.discord || '');
+            setDiscordLinked(savedLinks.discordLinked || false);
+            setTwitterHandle(savedLinks.twitter || '');
+            setTwitchUsername(savedLinks.twitch || '');
+            setTiktokHandle(savedLinks.tiktok || '');
+
+            try {
+                // Load teams
+                const userTeams = await db.getTeams(session.id);
+                setTeams(userTeams || []);
+
+                // Load match history from user's actual matches
+                const userMatchHistory = await db.getUserMatchHistory(session.id);
+                setMatchHistory(userMatchHistory || []);
+            } catch (error) {
+                console.error('Error loading profile data:', error);
+            }
+        };
         
-        const savedLinks = JSON.parse(localStorage.getItem(`social_links_${session.id}`) || '{}');
-        setEpicGamesName(savedLinks.epicGames || '');
-        setDiscordUsername(savedLinks.discord || '');
-        setDiscordLinked(savedLinks.discordLinked || false);
-        setTwitterHandle(savedLinks.twitter || '');
-        setTwitchUsername(savedLinks.twitch || '');
-        setTiktokHandle(savedLinks.tiktok || '');
-
-        // Load teams
-        const userTeams = db.getTeams();
-        setTeams(userTeams);
-
-        // Load match history from user's actual matches
-        const userMatchHistory = db.getUserMatchHistory(session.id);
-        setMatchHistory(userMatchHistory);
+        loadProfileData();
     }, [navigate]);
 
     const handleDiscordLogin = () => {
