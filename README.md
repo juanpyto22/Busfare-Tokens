@@ -27,72 +27,66 @@ Plataforma de apuestas de tokens para partidas de Fortnite con sistema de pagos 
 - CORS habilitado
 
 ### Base de Datos
-- 🚨 **Actualmente:** LocalStorage (solo desarrollo)
-- ✅ **Para producción:** Se recomienda migrar a Supabase o PostgreSQL
+- ✅ **Supabase:** PostgreSQL + Auth + Real-time
+- ✅ **Autenticación:** Supabase Auth (email/password)
+- ✅ **En Producción:** Listo para Vercel + Supabase
 
 ## 📦 Instalación Local
 
 ### 1. Clonar repositorio
 ```bash
-git clone <tu-repo>
-cd tokens
+git clone https://github.com/juanpyto22/Busfare-Tokens.git
+cd Busfare-Tokens
 ```
 
-### 2. Instalar dependencias del frontend
+### 2. Instalar dependencias
 ```bash
 npm install
 ```
 
-### 3. Configurar variables de entorno del frontend
+### 3. Configurar Supabase (.env)
 ```bash
 # Copiar el archivo de ejemplo
 copy .env.example .env
 
-# Editar .env y añadir tu clave pública de Stripe
-VITE_STRIPE_PUBLIC_KEY=pk_test_tu_clave_aqui
+# Editar .env con tus credenciales de Supabase:
+# Obtén estos valores de: https://app.supabase.com → Tu Proyecto → Settings → API
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_ANON_KEY=tu-anon-key
+
+# Stripe (opcional para desarrollo local)
+VITE_STRIPE_PUBLIC_KEY=pk_test_tu_clave
 ```
 
-### 4. Instalar dependencias del backend
+### 4. Crear usuarios en Supabase
+1. Ve a: https://app.supabase.com → Tu Proyecto
+2. **Authentication → Users** → Create New User
+3. Crea: `admin@busfare.com` y `arbitro@busfare.com`
+4. Ejecuta el SQL: `CREAR-USUARIOS-ADMIN-ARBITRO.sql`
+
+### 5. Iniciar servidor de desarrollo
 ```bash
-cd backend
-npm install
-```
-
-### 5. Configurar variables de entorno del backend
-```bash
-# En la carpeta backend
-copy .env.example .env
-
-# Editar .env y añadir:
-STRIPE_SECRET_KEY=sk_test_tu_clave_secreta
-PORT=3001
-```
-
-### 6. Iniciar servicios
-
-**Terminal 1 - Backend:**
-```bash
-cd backend
-npm start
-```
-
-**Terminal 2 - Frontend:**
-```bash
-# En la raíz del proyecto
 npm run dev
 ```
 
-Abrir en navegador: http://localhost:3000
+Abre: http://localhost:3000
 
 ## 🧪 Usuarios de Prueba
 
 ### Administrador
 - Email: `admin@busfare.com`
-- Password: `admin123`
+- Password: `Admin@123456` (o la que configuraste)
+- Rol: `admin`
+- Acceso a: `/admin`
 
-### Moderador
+### Moderador/Árbitro
 - Email: `arbitro@busfare.com`
-- Password: `arbitro123`
+- Password: `Arbitro@123456` (o la que configuraste)
+- Rol: `moderator`
+- Acceso a: `/moderator`
+
+### Crear nuevos usuarios
+Usa el formulario de registro en `/register`. Los nuevos usuarios tendrán rol `user` por defecto.
 
 ## 💳 Tarjetas de Prueba Stripe
 
@@ -105,17 +99,28 @@ Abrir en navegador: http://localhost:3000
 **Fecha:** Cualquier fecha futura (ej: 12/30)  
 **CVC:** Cualquier 3 dígitos (ej: 123)
 
-## 🚀 Despliegue en Producción
+## 🚀 Despliegue en Vercel
 
-Ver [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) para una guía completa.
+### Pasos Rápidos
 
-### Resumen Rápido
+1. **Conectar GitHub a Vercel:**
+   - Ve a: https://vercel.com
+   - Conecta tu repositorio: `juanpyto22/Busfare-Tokens`
 
-1. **Base de Datos:** Migrar a Supabase o PostgreSQL
-2. **Backend:** Desplegar en Railway, Render o Fly.io
-3. **Frontend:** Desplegar en Vercel o Netlify
-4. **Variables de Entorno:** Configurar en cada plataforma
-5. **Stripe:** Configurar webhooks y modo producción
+2. **Configurar variables de entorno en Vercel:**
+   - Settings → Environment Variables
+   - Agrega:
+     ```
+     VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+     VITE_SUPABASE_ANON_KEY=tu-anon-key
+     VITE_STRIPE_PUBLIC_KEY=pk_test_tu_clave (opcional)
+     ```
+
+3. **Deploy:** Vercel se encargará automáticamente
+
+Tu sitio estará en: `https://tu-proyecto.vercel.app`
+
+**📖 Ver documentación completa:** [GUIA-DEPLOYMENT-VERCEL.md](./GUIA-DEPLOYMENT-VERCEL.md)
 
 ## 📁 Estructura del Proyecto
 
@@ -138,17 +143,20 @@ tokens/
 
 ### Frontend (.env)
 ```env
-VITE_STRIPE_PUBLIC_KEY=pk_test_...
-VITE_API_URL=http://localhost:3001  # O URL de producción
+# Supabase - REQUERIDO
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_ANON_KEY=tu-anon-key-aqui
+
+# Stripe - Opcional para desarrollo
+VITE_STRIPE_PUBLIC_KEY=pk_test_tu_clave
+
+# Backend API - En desarrollo
+VITE_API_URL=http://localhost:3001
 ```
 
-### Backend (backend/.env)
-```env
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...     # Opcional
-PORT=3001
-NODE_ENV=development                # O production
-```
+**Obtén estos valores de:**
+- **Supabase:** https://app.supabase.com → Tu Proyecto → Settings → API
+- **Stripe:** https://dashboard.stripe.com/test/apikeys
 
 ## 🐛 Solución de Problemas
 
