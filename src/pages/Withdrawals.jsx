@@ -21,18 +21,24 @@ const Withdrawals = () => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const session = db.getSession();
-        if (!session) {
-            navigate('/login');
-            return;
-        }
-        const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
-        const updatedUser = allUsers.find(u => u.id === session.id);
-        setUser(updatedUser || session);
-        setWithdrawals(updatedUser?.withdrawals || []);
+        const loadWithdrawals = async () => {
+            const session = db.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+            setUser(session);
+            try {
+                const userWithdrawals = await db.getWithdrawals(session.id);
+                setWithdrawals(userWithdrawals || []);
+            } catch (error) {
+                console.error('Error loading withdrawals:', error);
+            }
+        };
+        loadWithdrawals();
     }, [navigate]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
@@ -68,20 +74,41 @@ const Withdrawals = () => {
             return;
         }
 
-        const result = db.requestWithdrawal(user.id, tokens, method, accountInfo);
-
-        if (result.success) {
-            toast({
-                title: "✅ Solicitud Enviada",
-                description: `Tu retiro de ${tokens} tokens está siendo procesado`,
-                className: "bg-green-950 border-green-800 text-white"
+        try {
+            const result = await db.createWithdrawal({
+                user_id: user.id,
+                amount: tokens,
+                method: method,
+                account_info: accountInfo,
+                status: 'pending'
             });
-            
-            // Actualizar estado
-            const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
-            const updatedUser = allUsers.find(u => u.id === user.id);
-            setUser(updatedUser);
-            setWithdrawals(updatedUser?.withdrawals || []);
+
+            if (result) {
+                toast({
+                    title: "✅ Solicitud Enviada",
+                    description: `Tu retiro de ${tokens} tokens está siendo procesado`,
+                    className: "bg-green-950 border-green-800 text-white"
+                });
+                
+                // Recargar withdrawals
+                const userWithdrawals = await db.getWithdrawals(user.id);
+                setWithdrawals(userWithdrawals || []);
+                
+                // Limpiar formulario
+                setAmount('');
+                setMethod('');
+                setAccountInfo('');
+            }
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: error.message || "Error al procesar el retiro",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
             
             // Limpiar formulario
             setAmount('');

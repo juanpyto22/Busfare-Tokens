@@ -30,33 +30,30 @@ const MatchDetail = () => {
     }, []);
 
     useEffect(() => {
-        const fetchData = () => {
+        const fetchData = async () => {
             const session = db.getSession();
             if (!session) {
                 navigate('/login');
                 return;
             }
             setUser(session);
-            const m = db.getMatch(id);
-            if (m) {
-                setMatch(m);
-                // Inicializar ready status desde la base de datos
-                if (m.playersReady) {
-                    setPlayerReadyStatus(m.playersReady);
+            try {
+                const m = await db.getMatch(id);
+                if (m) {
+                    setMatch(m);
+                    // Inicializar ready status desde la base de datos
+                    if (m.playersReady) {
+                        setPlayerReadyStatus(m.playersReady);
+                    }
                 }
+            } catch (error) {
+                console.error('Error loading match:', error);
             }
             setIsLoading(false);
         };
         fetchData();
         const interval = setInterval(() => {
-            const m = db.getMatch(id);
-            if (m) {
-                setMatch(m);
-                // Actualizar ready status desde la base de datos
-                if (m.playersReady) {
-                    setPlayerReadyStatus(m.playersReady);
-                }
-            }
+            fetchData();
         }, 1000);
         return () => clearInterval(interval);
     }, [id, navigate]);

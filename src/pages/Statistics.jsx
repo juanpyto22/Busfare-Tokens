@@ -10,13 +10,20 @@ const Statistics = () => {
     const [stats, setStats] = useState(null);
 
     useEffect(() => {
-        const session = db.getSession();
-        if (!session) {
-            navigate('/login');
-            return;
-        }
-        const userStats = db.getUserStatistics(session.id);
-        setStats(userStats);
+        const loadStats = async () => {
+            const session = db.getSession();
+            if (!session) {
+                navigate('/login');
+                return;
+            }
+            try {
+                const userStats = await db.getUserStatistics(session.id);
+                setStats(userStats);
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        };
+        loadStats();
     }, [navigate]);
 
     if (!stats) return null;
