@@ -244,7 +244,7 @@ const Matches = () => {
         }
 
         // Verificar que el usuario tenga suficientes tokens
-        const userBalance = user.balance || 0;
+        const userBalance = user?.tokens || 0;
         
         // Validar mínimo de entrada
         if (newMatch.entryFee < 0.5) {

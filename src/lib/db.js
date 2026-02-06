@@ -149,7 +149,7 @@ export const db = {
             email,
             username,
             role: 'user',
-            tokens: 100,
+            tokens: 1,
             level: 1,
             wins: 0,
             losses: 0,
