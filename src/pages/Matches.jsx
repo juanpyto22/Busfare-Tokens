@@ -191,25 +191,31 @@ const Matches = () => {
             return;
         }
 
-        // 🔄 REFRESCAR DATOS DEL USUARIO DESDE SUPABASE
+        // 🔄 REFRESCAR DATOS DEL USUARIO DESDE SUPABASE - VERSIÓN SIMPLE Y DIRECTA
         let currentUser = user;
-        try {
-            let freshUserData = null;
-            // Primero intentar con getCurrentUser
-            freshUserData = await db.getCurrentUser();
-            // Si falla, usar getUserById con el ID del localStorage
-            if (!freshUserData && user?.id) {
-                freshUserData = await db.getUserById(user.id);
+        
+        if (user?.id) {
+            try {
+                // Obtener datos frescos de Supabase usando el ID del usuario
+                const freshUserData = await db.getUserById(user.id);
+                if (freshUserData && freshUserData.tokens !== undefined) {
+                    currentUser = freshUserData;
+                    console.log('✅ Usuario actualizado desde BD:', {
+                        username: freshUserData.username,
+                        tokens: freshUserData.tokens,
+                        id: freshUserData.id
+                    });
+                    // Actualizar sesión en localStorage y en state
+                    setUser(freshUserData);
+                    localStorage.setItem('fortnite_platform_session', JSON.stringify(freshUserData));
+                } else {
+                    console.warn('❌ No se recibieron datos frescos de BD');
+                }
+            } catch (error) {
+                console.error('❌ Error al refrescar usuario desde BD:', error);
+                // Si falla, usar los datos que tenemos en memoria
+                console.log('Usando datos en memoria:', { username: user.username, tokens: user.tokens });
             }
-            
-            if (freshUserData) {
-                currentUser = freshUserData;
-                setUser(freshUserData);
-                localStorage.setItem('fortnite_platform_session', JSON.stringify(freshUserData));
-            }
-        } catch (error) {
-            console.error('Error refrescando usuario:', error);
-            // Continuar con los datos que tengamos
         }
 
         // Verificar si el usuario ya está en un match activo
@@ -266,6 +272,17 @@ const Matches = () => {
 
         // Verificar que el usuario tenga suficientes tokens - USA currentUser ACTUALIZADO
         const userBalance = currentUser?.tokens || 0;
+        
+        console.log('🔍 VALIDACIÓN DE BALANCE:', {
+            currentUser: {
+                id: currentUser?.id,
+                username: currentUser?.username,
+                tokens: currentUser?.tokens
+            },
+            userBalance: userBalance,
+            entryFee: newMatch.entryFee,
+            suficiente: userBalance >= newMatch.entryFee
+        });
         
         // Validar mínimo de entrada
         if (newMatch.entryFee < 0.5) {
