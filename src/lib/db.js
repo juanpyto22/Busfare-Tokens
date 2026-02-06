@@ -46,6 +46,13 @@ export const db = {
         throw new Error('Usuario no encontrado en la base de datos')
       }
       
+      // Verificar si el usuario está baneado
+      const ban = await db.checkUserBan(userData.id);
+      if (ban) {
+        const banEndDate = new Date(ban.ban_end).toLocaleDateString('es-ES');
+        throw new Error(`Tu cuenta ha sido baneada hasta el ${banEndDate}.\nRazón: ${ban.reason}`);
+      }
+      
       // Actualizar último login
       await supabase.from('users').update({ 
         last_login: new Date().toISOString() 
@@ -92,13 +99,13 @@ export const db = {
         throw new Error('El nombre de usuario ya existe')
       }
 
-      // Crear usuario en Auth
+      // Crear usuario en Auth (sin validación de email)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { username },
-          emailRedirectTo: `${window.location.origin}/verify-email`
+          data: { username }
+          // NO incluir emailRedirectTo - sin verificación requerida
         }
       })
       
@@ -854,34 +861,93 @@ export const db = {
   },
   
   banUser: async (userId, days, reason) => {
-    const bannedUntil = new Date()
-    bannedUntil.setDate(bannedUntil.getDate() + days)
-    
-    const { data, error } = await supabase
-      .from('users')
-      .update({ 
-        banned_until: bannedUntil.toISOString()
-      })
-      .eq('id', userId)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return { success: true, user: data }
+    try {
+      const adminId = db.getSession()?.id;
+      if (!adminId) throw new Error('No hay sesión de admin');
+      
+      const banStart = new Date();
+      const banEnd = new Date(banStart.getTime() + days * 24 * 60 * 60 * 1000);
+      
+      // Crear registro en user_bans
+      const { data: banData, error: banError } = await supabase
+        .from('user_bans')
+        .insert([{
+          user_id: userId,
+          admin_id: adminId,
+          reason: reason || 'No especificado',
+          ban_start: banStart.toISOString(),
+          ban_end: banEnd.toISOString(),
+          is_active: true
+        }])
+        .select()
+        .single();
+      
+      if (banError) throw banError;
+      
+      // Actualizar campo banned_until en users (para backward compatibility)
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          banned_until: banEnd.toISOString()
+        })
+        .eq('id', userId);
+      
+      if (updateError) throw updateError;
+      
+      return { success: true, ban: banData };
+    } catch (error) {
+      console.error('Error al banear usuario:', error);
+      throw new Error(error.message || 'Error al banear usuario');
+    }
   },
-  
+
   unbanUser: async (userId) => {
-    const { data, error } = await supabase
-      .from('users')
-      .update({ 
-        banned_until: null
-      })
-      .eq('id', userId)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return { success: true, user: data }
+    try {
+      // Desactivar ban activo
+      const { error: updateBanError } = await supabase
+        .from('user_bans')
+        .update({ is_active: false })
+        .eq('user_id', userId)
+        .eq('is_active', true);
+      
+      if (updateBanError) throw updateBanError;
+      
+      // Limpiar banned_until en users
+      const { error: updateUserError } = await supabase
+        .from('users')
+        .update({ 
+          banned_until: null
+        })
+        .eq('id', userId);
+      
+      if (updateUserError) throw updateUserError;
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error al desbanear usuario:', error);
+      throw new Error(error.message || 'Error al desbanear usuario');
+    }
+  },
+
+  checkUserBan: async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_bans')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .gt('ban_end', new Date().toISOString())
+        .order('ban_end', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      return data || null;
+    } catch (error) {
+      console.error('Error al verificar ban:', error);
+      return null;
+    }
   },
   
   deleteUser: async (userId) => {
