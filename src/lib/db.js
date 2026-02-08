@@ -242,7 +242,7 @@ export const db = {
   },
 
   getUserByUsername: async (username) => {
-    const { data, error } = await supabase
+    const { data, error } = await supabbase
       .from('users')
       .select('*')
       .eq('username', username)
