@@ -158,7 +158,7 @@ const Navbar = () => {
                     {/* Wallet/Stats Display */}
                     <Dialog>
                         <DialogTrigger asChild>
-                            <div className="hidden lg:flex items-center gap-3 bg-blue-950/30 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)] cursor-pointer hover:border-cyan-400/60 transition-all" title="Ver detalles de tus tokens">
+                            <div className="flex items-center gap-3 bg-blue-950/30 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)] cursor-pointer hover:border-cyan-400/60 transition-all" title="Ver detalles de tus tokens">
                                 <div className="flex items-center gap-2 pr-3 border-r border-blue-400/20">
                                     <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></div>
                                     <span className="text-sm font-bold text-white">{user.tokens.toFixed(2)}</span>
