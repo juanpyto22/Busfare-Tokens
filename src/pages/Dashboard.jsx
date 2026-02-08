@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Coins, History, TrendingUp, Calendar, BarChart3, Receipt, ArrowDownToLine } from 'lucide-react';
 import { Helmet } from 'react-helmet';
+import SendTipModal from '@/components/SendTipModal';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -32,6 +33,10 @@ const Dashboard = () => {
                 <div className="mb-10">
                     <h1 className="text-3xl font-bold text-white">Panel de Control</h1>
                     <p className="text-slate-400">Bienvenido de nuevo, <span className="text-green-400 font-semibold">{user.username}</span></p>
+                </div>
+
+                <div className="flex justify-end mb-6">
+                    <SendTipModal user={user} onSuccess={() => window.location.reload()} />
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-4 mb-8">
