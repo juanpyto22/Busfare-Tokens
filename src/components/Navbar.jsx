@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Coins, User, LogOut, Shield, Swords, Users, Trophy, Wallet, Settings, Bell, Check, X, Languages, Mail, AlertCircle, Scale } from 'lucide-react';
-import BusLogo from './BusLogo';
+// import BusLogo from './BusLogo';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -110,7 +110,7 @@ const Navbar = () => {
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 group">
                      <div className="transform group-hover:scale-110 transition-transform duration-300 filter drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">
-                         <BusLogo className="h-10 w-10" />
+                         <img src="/img/logo.png" alt="BusFare Logo" className="h-10 w-10" />
                      </div>
                      <span className="text-lg font-black tracking-tighter text-white italic uppercase hidden md:block text-glow">
                          BusFare<span className="text-blue-400">-tokens</span>
