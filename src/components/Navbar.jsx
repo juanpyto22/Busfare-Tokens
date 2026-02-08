@@ -156,19 +156,38 @@ const Navbar = () => {
                     )}
 
                     {/* Wallet/Stats Display */}
-                    <div className="hidden lg:flex items-center gap-3 bg-blue-950/30 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
-                        <div className="flex items-center gap-2 pr-3 border-r border-blue-400/20">
-                             <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></div>
-                             <span className="text-sm font-bold text-white">{user.tokens.toFixed(2)}</span>
-                             <div className="bg-cyan-500/20 p-0.5 rounded-full border border-cyan-400/30">
-                                 <Coins className="h-3 w-3 text-cyan-400" />
-                             </div>
-                        </div>
-                        <div className="flex items-center gap-2" title="Snipes">
-                             <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse"></div>
-                             <span className="text-sm font-bold text-white">{user.snipes || 0}</span>
-                        </div>
-                    </div>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <div className="hidden lg:flex items-center gap-3 bg-blue-950/30 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)] cursor-pointer hover:border-cyan-400/60 transition-all" title="Ver detalles de tus tokens">
+                                <div className="flex items-center gap-2 pr-3 border-r border-blue-400/20">
+                                    <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></div>
+                                    <span className="text-sm font-bold text-white">{user.tokens.toFixed(2)}</span>
+                                    <div className="bg-cyan-500/20 p-0.5 rounded-full border border-cyan-400/30">
+                                        <Coins className="h-3 w-3 text-cyan-400" />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2" title="Snipes">
+                                    <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse"></div>
+                                    <span className="text-sm font-bold text-white">{user.snipes || 0}</span>
+                                </div>
+                            </div>
+                        </DialogTrigger>
+                        <DialogContent className="bg-slate-950 border-blue-500/30 text-white max-w-md flex flex-col items-center justify-center">
+                            <DialogHeader>
+                                <DialogTitle className="text-3xl font-bold text-cyan-400 mb-2 flex items-center gap-2">
+                                    <Coins className="h-8 w-8 text-cyan-400" />
+                                    {user.tokens === 1 ? '¡Tienes una token!' : `Tienes ${user.tokens.toFixed(2)} tokens`}
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="text-lg text-blue-200 mt-2 mb-4">
+                                {user.tokens === 1
+                                    ? 'Puedes usar tu token para crear una partida. ¡Aprovecha tu oportunidad!'
+                                    : user.tokens > 1
+                                        ? 'Puedes crear partidas y apostar tokens.'
+                                        : 'No tienes tokens suficientes para crear partidas.'}
+                            </div>
+                        </DialogContent>
+                    </Dialog>
 
                     <div className="flex items-center gap-3">
                         {/* Language Selector */}

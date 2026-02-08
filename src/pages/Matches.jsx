@@ -271,8 +271,7 @@ const Matches = () => {
         }
 
         // Verificar que el usuario tenga suficientes tokens - USA currentUser ACTUALIZADO
-        const userBalance = currentUser?.tokens || 0;
-        
+        const userBalance = Number(currentUser?.tokens) || 0;
         console.log('🔍 VALIDACIÓN DE BALANCE:', {
             currentUser: {
                 id: currentUser?.id,
@@ -283,9 +282,8 @@ const Matches = () => {
             entryFee: newMatch.entryFee,
             suficiente: userBalance >= newMatch.entryFee
         });
-        
         // Validar mínimo de entrada
-        if (newMatch.entryFee < 0.5) {
+        if (Number(newMatch.entryFee) < 0.5) {
             toast({ 
                 title: "Error", 
                 description: "La apuesta mínima es de 0.5 tokens", 
@@ -293,8 +291,8 @@ const Matches = () => {
             });
             return;
         }
-        
-        if (userBalance < newMatch.entryFee) {
+        // Permitir crear partida si el usuario tiene al menos 0.5 tokens
+        if (userBalance < Number(newMatch.entryFee)) {
             toast({ 
                 title: "❌ Fondos Insuficientes", 
                 description: `Necesitas ${newMatch.entryFee} tokens pero solo tienes ${userBalance.toFixed(2)} tokens`, 
