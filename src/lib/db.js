@@ -1504,6 +1504,55 @@ export const db = {
     })
     
     return { success: true, prize }
+  },
+
+  // Transferir tokens de un usuario a otro
+  transferTokens: async (fromUserId, toUserId, amount) => {
+    // Restar tokens al usuario origen
+    const { data: fromUser, error: error1 } = await supabase
+      .from('users')
+      .select('tokens')
+      .eq('id', fromUserId)
+      .single();
+    if (error1) throw error1;
+    let fromBalance = Number(fromUser?.tokens);
+    if (fromBalance === null || fromBalance === undefined || isNaN(fromBalance)) fromBalance = 0;
+    if (fromBalance < amount) throw new Error('Fondos insuficientes');
+    const { error: updateFromError } = await supabase
+      .from('users')
+      .update({ tokens: fromBalance - amount })
+      .eq('id', fromUserId);
+    if (updateFromError) throw updateFromError;
+    // Sumar tokens al usuario destino
+    const { data: toUser, error: error2 } = await supabase
+      .from('users')
+      .select('tokens')
+      .eq('id', toUserId)
+      .single();
+    if (error2) throw error2;
+    let toBalance = Number(toUser?.tokens);
+    if (toBalance === null || toBalance === undefined || isNaN(toBalance)) toBalance = 0;
+    const { error: updateToError } = await supabase
+      .from('users')
+      .update({ tokens: toBalance + amount })
+      .eq('id', toUserId);
+    if (updateToError) throw updateToError;
+    // Registrar transacción (opcional)
+    await supabase.from('transactions').insert({
+      user_id: fromUserId,
+      type: 'tip_sent',
+      amount: -amount,
+      to_user_id: toUserId,
+      created_at: new Date().toISOString()
+    });
+    await supabase.from('transactions').insert({
+      user_id: toUserId,
+      type: 'tip_received',
+      amount: amount,
+      from_user_id: fromUserId,
+      created_at: new Date().toISOString()
+    });
+    return true;
   }
 }
 
