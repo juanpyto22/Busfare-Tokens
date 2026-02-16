@@ -1,0 +1,13 @@
+{
+  "name": "migration-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Scripts para migrar datos a Supabase",
+  "scripts": {
+    "export": "node export-localstorage.js",
+    "import": "node import-to-supabase.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

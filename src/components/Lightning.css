@@ -1,0 +1,69 @@
+.lightning-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.neon-text {
+  color: #00ffff;
+  font-family: 'Arial Black', sans-serif;
+  letter-spacing: 0.1em;
+  animation: neon-flicker 0.15s infinite, neon-glow 2s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes neon-glow {
+  0%, 100% {
+    text-shadow: 
+      0 0 10px #00ffff, 
+      0 0 20px #00ffff, 
+      0 0 30px #00ffff, 
+      0 0 40px #0099ff, 
+      0 0 70px #0099ff, 
+      0 0 80px #0099ff, 
+      0 0 100px #0099ff, 
+      0 0 150px #0099ff;
+  }
+  50% {
+    text-shadow: 
+      0 0 5px #00ffff, 
+      0 0 10px #00ffff, 
+      0 0 15px #00ffff, 
+      0 0 25px #0099ff, 
+      0 0 40px #0099ff, 
+      0 0 50px #0099ff, 
+      0 0 70px #0099ff, 
+      0 0 100px #0099ff;
+  }
+}
+
+@keyframes neon-flicker {
+  0% {
+    opacity: 1;
+  }
+  19% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  24% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  54% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+  }
+}
