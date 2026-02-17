@@ -29,10 +29,19 @@ const Withdrawals = () => {
         const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
         const updatedUser = allUsers.find(u => u.id === session.id);
         setUser(updatedUser || session);
-        setWithdrawals(updatedUser?.withdrawals || []);
+        loadWithdrawals(session.id);
     }, [navigate]);
 
-    const handleSubmit = (e) => {
+    const loadWithdrawals = async (userId) => {
+        try {
+            const userWithdrawals = await db.getUserWithdrawals(userId);
+            setWithdrawals(userWithdrawals);
+        } catch (error) {
+            console.error('Error loading withdrawals:', error);
+        }
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
@@ -68,7 +77,7 @@ const Withdrawals = () => {
             return;
         }
 
-        const result = db.requestWithdrawal(user.id, tokens, method, accountInfo);
+        const result = await db.requestWithdrawal(user.id, tokens, method, accountInfo);
 
         if (result.success) {
             toast({
@@ -81,7 +90,7 @@ const Withdrawals = () => {
             const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
             const updatedUser = allUsers.find(u => u.id === user.id);
             setUser(updatedUser);
-            setWithdrawals(updatedUser?.withdrawals || []);
+            loadWithdrawals(user.id);
             
             // Limpiar formulario
             setAmount('');
@@ -90,7 +99,7 @@ const Withdrawals = () => {
         } else {
             toast({
                 title: "Error",
-                description: result.message,
+                description: result.error || 'Error procesando retiro',
                 variant: "destructive"
             });
         }
