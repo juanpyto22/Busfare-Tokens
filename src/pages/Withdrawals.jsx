@@ -85,18 +85,17 @@ const Withdrawals = () => {
                 description: `Tu retiro de ${tokens} tokens está siendo procesado`,
                 className: "bg-green-950 border-green-800 text-white"
             });
-            
             // Actualizar estado
             const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
             const updatedUser = allUsers.find(u => u.id === user.id);
             setUser(updatedUser);
             loadWithdrawals(user.id);
-            
             // Limpiar formulario
             setAmount('');
             setMethod('');
             setAccountInfo('');
-        } else {
+        }
+        else {
             toast({
                 title: "Error",
                 description: result.error || 'Error procesando retiro',
