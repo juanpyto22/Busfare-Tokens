@@ -94,12 +94,37 @@ const Lightning = ({ hue = 230, xOffset = 0, speed = 1, intensity = 1, size = 1 
           uv.x *= iResolution.x / iResolution.y;
           uv.x += uXOffset;
           
-          uv += 2.0 * fbm(uv * uSize + 0.8 * iTime * uSpeed) - 1.0;
+          // Animación del rayo más dinámica
+          float timeVar = iTime * uSpeed;
+          float pulse = sin(timeVar * 3.0) * 0.5 + 0.5;
+          float flicker = mix(0.05, 0.12, hash11(timeVar * 8.0));
+          
+          // FBM mejorado con más detalle
+          uv += 2.2 * fbm(uv * uSize + 0.8 * timeVar) - 1.1;
           
           float dist = abs(uv.x);
-          vec3 baseColor = hsv2rgb(vec3(uHue / 360.0, 0.7, 0.8));
-          vec3 col = baseColor * pow(mix(0.0, 0.07, hash11(iTime * uSpeed)) / dist, 1.0) * uIntensity;
-          col = pow(col, vec3(1.0));
+          
+          // Color base con variación temporal
+          float hueShift = sin(timeVar * 0.5) * 20.0;
+          vec3 baseColor = hsv2rgb(vec3((uHue + hueShift) / 360.0, 0.85, 0.95));
+          
+          // Efecto de rayo más brillante y dramático
+          float intensity = pow(flicker / (dist + 0.001), 1.2) * uIntensity;
+          
+          // Añadir brillo adicional con pulso
+          intensity *= (1.0 + pulse * 0.5);
+          
+          // Efecto de resplandor exterior
+          float glow = exp(-dist * 3.0) * pulse * 0.3;
+          
+          vec3 col = baseColor * intensity + baseColor * glow;
+          
+          // Reducir intensidad general para no competir con el texto
+          col *= 0.5;
+          
+          // Corrección de gamma para mejor visualización
+          col = pow(col, vec3(0.8));
+          
           fragColor = vec4(col, 1.0);
       }
 
@@ -176,14 +201,23 @@ const Lightning = ({ hue = 230, xOffset = 0, speed = 1, intensity = 1, size = 1 
   }, [hue, xOffset, speed, intensity, size]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full overflow-hidden bg-gradient-to-b from-slate-950 via-black to-black">
       <canvas ref={canvasRef} className="lightning-container" />
+      <div className="absolute inset-0 bg-gradient-radial from-transparent via-black/20 to-black/50 pointer-events-none" />
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <h1 className="text-9xl font-black neon-text" style={{
-          textShadow: '0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff, 0 0 40px #0099ff, 0 0 70px #0099ff, 0 0 80px #0099ff, 0 0 100px #0099ff, 0 0 150px #0099ff'
-        }}>
-          FN
-        </h1>
+        <div className="text-center transform">
+          <h1 className="neon-text-premium" style={{
+            fontSize: '10rem',
+            fontFamily: '"Impact", "Arial Black", sans-serif',
+            fontWeight: 900,
+            letterSpacing: '0.2em',
+            lineHeight: 1,
+            margin: 0,
+            padding: 0
+          }}>
+            FN
+          </h1>
+        </div>
       </div>
     </div>
   );

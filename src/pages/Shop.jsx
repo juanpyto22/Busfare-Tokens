@@ -151,13 +151,14 @@ const CheckoutForm = ({ selectedPackage, onSuccess, onError }) => {
 
             } else {
                 // Compra de tokens - crear Payment Intent
-                const response = await fetch('http://localhost:3002/create-payment-intent', {
+                const response = await fetch('http://localhost:3001/create-payment-intent', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         amount: selectedPackage.price,
                         packageId: selectedPackage.id,
-                        packageName: selectedPackage.name
+                        packageName: selectedPackage.name,
+                        userId: session.id // Incluir userId para el webhook
                     })
                 });
 

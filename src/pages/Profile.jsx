@@ -43,22 +43,40 @@ const Profile = () => {
         setUsername(session.username);
         setEmail(session.email);
         
-        const savedLinks = JSON.parse(localStorage.getItem(`social_links_${session.id}`) || '{}');
-        setEpicGamesName(savedLinks.epicGames || '');
-        setDiscordUsername(savedLinks.discord || '');
-        setDiscordLinked(savedLinks.discordLinked || false);
-        setTwitterHandle(savedLinks.twitter || '');
-        setTwitchUsername(savedLinks.twitch || '');
-        setTiktokHandle(savedLinks.tiktok || '');
+        // Load social accounts
+        loadSocialAccounts();
 
         // Load teams
-        const userTeams = db.getTeams();
-        setTeams(userTeams);
+        loadTeams();
 
         // Load match history from user's actual matches
-        const userMatchHistory = db.getUserMatchHistory(session.id);
-        setMatchHistory(userMatchHistory);
+        loadMatchHistory();
     }, [navigate]);
+
+    const loadSocialAccounts = async () => {
+        const session = db.getSession();
+        if (!session) return;
+        const accounts = await db.getSocialAccounts(session.id);
+        setEpicGamesName(accounts.epicGames || '');
+        setDiscordUsername(accounts.discord || '');
+        setTwitterHandle(accounts.twitter || '');
+        setTwitchUsername(accounts.twitch || '');
+        setTiktokHandle(accounts.tiktok || '');
+    };
+
+    const loadTeams = async () => {
+        const session = db.getSession();
+        if (!session) return;
+        const userTeams = await db.getTeams(session.id);
+        setTeams(userTeams);
+    };
+
+    const loadMatchHistory = async () => {
+        const session = db.getSession();
+        if (!session) return;
+        const history = await db.getUserMatchHistory(session.id);
+        setMatchHistory(history);
+    };
 
     const handleDiscordLogin = () => {
         const CLIENT_ID = '1234567890';
@@ -86,20 +104,73 @@ const Profile = () => {
         });
     };
 
-    const handleSaveConnectedAccounts = () => {
+    const handleSaveConnectedAccounts = async () => {
         const socialLinks = {
             epicGames: epicGamesName,
             discord: discordUsername,
-            discordLinked: discordLinked,
             twitter: twitterHandle,
             twitch: twitchUsername,
             tiktok: tiktokHandle
         };
-        localStorage.setItem(`social_links_${user.id}`, JSON.stringify(socialLinks));
-        toast({ 
-            title: "Cuentas vinculadas guardadas",
-            className: "bg-green-600 text-white" 
-        });
+        const result = await db.updateSocialAccounts(user.id, socialLinks);
+        if (result.success) {
+            toast({ 
+                title: "Cuentas vinculadas guardadas",
+                description: "Tus redes sociales han sido actualizadas",
+                className: "bg-green-600 text-white" 
+            });
+        } else {
+            toast({ 
+                title: "Error al guardar",
+                description: "No se pudieron actualizar las cuentas",
+                className: "bg-red-600 text-white" 
+            });
+        }
+    };
+
+    const handleDisconnectAccount = async (platform) => {
+        // Clear the state
+        switch (platform) {
+            case 'epic':
+                setEpicGamesName('');
+                break;
+            case 'discord':
+                setDiscordUsername('');
+                break;
+            case 'twitter':
+                setTwitterHandle('');
+                break;
+            case 'twitch':
+                setTwitchUsername('');
+                break;
+            case 'tiktok':
+                setTiktokHandle('');
+                break;
+        }
+
+        // Update database
+        const socialLinks = {
+            epicGames: platform === 'epic' ? '' : epicGamesName,
+            discord: platform === 'discord' ? '' : discordUsername,
+            twitter: platform === 'twitter' ? '' : twitterHandle,
+            twitch: platform === 'twitch' ? '' : twitchUsername,
+            tiktok: platform === 'tiktok' ? '' : tiktokHandle
+        };
+        
+        const result = await db.updateSocialAccounts(user.id, socialLinks);
+        if (result.success) {
+            toast({ 
+                title: "Cuenta desconectada",
+                description: `Tu cuenta de ${platform} ha sido desvinculada`,
+                className: "bg-blue-600 text-white" 
+            });
+        } else {
+            toast({ 
+                title: "Error",
+                description: "No se pudo desconectar la cuenta",
+                className: "bg-red-600 text-white" 
+            });
+        }
     };
 
     const handleSendTip = async () => {
@@ -255,73 +326,45 @@ const Profile = () => {
                     </div>
 
                     <div className="flex-1">
-                        <div className="flex gap-8 border-b border-blue-500/20 mb-8">
-                            <button
-                                onClick={() => setActiveTab('overview')}
-                                className={`pb-4 px-2 font-medium transition-colors relative ${
-                                    activeTab === 'overview' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
-                                }`}
-                            >
-                                Overview
-                                {activeTab === 'overview' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('financial')}
-                                className={`pb-4 px-2 font-medium transition-colors relative ${
-                                    activeTab === 'financial' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
-                                }`}
-                            >
-                                Financial
-                                {activeTab === 'financial' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('teams')}
-                                className={`pb-4 px-2 font-medium transition-colors relative ${
-                                    activeTab === 'teams' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
-                                }`}
-                            >
-                                Teams
-                                {activeTab === 'teams' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('history')}
-                                className={`pb-4 px-2 font-medium transition-colors relative ${
-                                    activeTab === 'history' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
-                                }`}
-                            >
-                                Match History
-                                {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('transactions')}
-                                className={`pb-4 px-2 font-medium transition-colors relative ${
-                                    activeTab === 'transactions' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
-                                }`}
-                            >
-                                Transactions
-                                {activeTab === 'transactions' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('vip')}
-                                className={`pb-4 px-2 font-medium transition-colors relative ${
-                                    activeTab === 'vip' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
-                                }`}
-                            >
-                                VIP
-                                {activeTab === 'vip' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('settings')}
-                                className={`pb-4 px-2 font-medium transition-colors relative ${
-                                    activeTab === 'settings' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
-                                }`}
-                            >
-                                Settings
-                                {activeTab === 'settings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>}
-                            </button>
-                        </div>
+                        {/* Solo mostrar tabs horizontales cuando activeSidebar es 'profile' */}
+                        {activeSidebar === 'profile' && (
+                            <div className="flex gap-8 border-b border-blue-500/20 mb-8">
+                                <button
+                                    onClick={() => setActiveTab('overview')}
+                                    className={`pb-4 px-2 font-medium transition-colors relative ${
+                                        activeTab === 'overview' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
+                                    }`}
+                                >
+                                    Overview
+                                    {activeTab === 'overview' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>}
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('financial')}
+                                    className={`pb-4 px-2 font-medium transition-colors relative ${
+                                        activeTab === 'financial' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
+                                    }`}
+                                >
+                                    Financial
+                                    {activeTab === 'financial' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>}
+                                </button>
+                            </div>
+                        )}
 
-                        {activeTab === 'overview' && (
+                        {/* Mostrar título para las secciones del sidebar */}
+                        {activeSidebar !== 'profile' && (
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-bold text-white mb-2">
+                                    {activeSidebar === 'teams' && 'Teams'}
+                                    {activeSidebar === 'history' && 'Match History'}
+                                    {activeSidebar === 'transactions' && 'Transactions'}
+                                    {activeSidebar === 'vip' && 'VIP Subscription'}
+                                    {activeSidebar === 'settings' && 'Settings'}
+                                </h2>
+                                <div className="h-0.5 w-24 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>
+                            </div>
+                        )}
+
+                        {activeTab === 'overview' && activeSidebar === 'profile' && (
                             <div className="space-y-10">
                                 {/* Account Information */}
                                 <div className="grid md:grid-cols-2 gap-6">
@@ -620,7 +663,7 @@ const Profile = () => {
                             </div>
                         )}
 
-                        {activeTab === 'financial' && (
+                        {activeTab === 'financial' && activeSidebar === 'profile' && (
                             <div className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border border-blue-500/20 rounded-lg p-8 text-center hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300">
                                 <CreditCard className="h-12 w-12 text-blue-400/50 mx-auto mb-3" />
                                 <p className="text-blue-300/70">Financial data coming soon</p>
@@ -639,10 +682,10 @@ const Profile = () => {
                                     teams.map((team) => {
                                         const isLeader = team.members.some(m => m.name === user.username && m.role === 'Leader');
                                         
-                                        const handleDeleteTeam = () => {
+                                        const handleDeleteTeam = async () => {
                                             if (confirm(`¿Estás seguro de que deseas eliminar el equipo "${team.name}"?`)) {
-                                                db.deleteTeam(team.id);
-                                                setTeams(db.getTeams());
+                                                await db.deleteTeam(team.id);
+                                                await loadTeams();
                                                 toast({ 
                                                     title: "Equipo eliminado", 
                                                     description: `${team.name} ha sido eliminado`,
@@ -651,10 +694,10 @@ const Profile = () => {
                                             }
                                         };
 
-                                        const handleRemoveMember = (memberName) => {
+                                        const handleRemoveMember = async (memberName) => {
                                             if (confirm(`¿Estás seguro de que deseas expulsar a ${memberName}?`)) {
-                                                db.removeTeamMember(team.id, memberName);
-                                                setTeams(db.getTeams());
+                                                await db.removeTeamMember(team.id, memberName);
+                                                await loadTeams();
                                                 toast({ 
                                                     title: "Miembro expulsado", 
                                                     description: `${memberName} ha sido expulsado del equipo`,
@@ -969,76 +1012,196 @@ const Profile = () => {
                                     <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2 text-glow">
                                         <Users className="h-5 w-5 text-cyan-400" /> Cuentas Conectadas
                                     </h3>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-xs text-cyan-300 font-bold mb-2">EPIC GAMES</label>
-                                            <Input 
-                                                value={epicGamesName}
-                                                onChange={(e) => setEpicGamesName(e.target.value)}
-                                                placeholder="Tu nombre de Epic Games"
-                                                className="bg-blue-950/50 border-blue-500/30 text-white"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs text-cyan-300 font-bold mb-2">DISCORD</label>
-                                            <div className="flex gap-2">
-                                                <Input 
-                                                    value={discordUsername}
-                                                    onChange={(e) => setDiscordUsername(e.target.value)}
-                                                    placeholder="Tu nombre de Discord"
-                                                    className="bg-blue-950/50 border-blue-500/30 text-white"
-                                                    disabled={discordLinked}
-                                                />
-                                                {!discordLinked ? (
-                                                    <Button 
-                                                        onClick={handleDiscordLogin}
-                                                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]"
+                                    <div className="space-y-3">
+                                        {/* Epic Games */}
+                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">🎮</span>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">Epic Games</p>
+                                                    {epicGamesName ? (
+                                                        <p className="text-xs text-cyan-400">{epicGamesName}</p>
+                                                    ) : (
+                                                        <p className="text-xs text-gray-400">No conectado</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {epicGamesName ? (
+                                                <div className="flex gap-2">
+                                                    <a 
+                                                        href={`https://www.epicgames.com/site/${epicGamesName}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-3 py-1 text-xs bg-blue-600/50 hover:bg-blue-600 text-white rounded-md transition-colors"
                                                     >
-                                                        Conectar
-                                                    </Button>
-                                                ) : (
-                                                    <Button 
-                                                        onClick={handleDiscordUnlink}
-                                                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                                                        Ver perfil
+                                                    </a>
+                                                    <Button
+                                                        onClick={() => handleDisconnectAccount('epic')}
+                                                        className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
                                                     >
                                                         Desconectar
                                                     </Button>
-                                                )}
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => window.location.href = `http://localhost:3001/auth/epic?userId=${user.id}`}
+                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+                                                >
+                                                    Conectar
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {/* Discord */}
+                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">💬</span>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">Discord</p>
+                                                    {discordUsername ? (
+                                                        <p className="text-xs text-cyan-400">{discordUsername}</p>
+                                                    ) : (
+                                                        <p className="text-xs text-gray-400">No conectado</p>
+                                                    )}
+                                                </div>
                                             </div>
+                                            {discordUsername ? (
+                                                <Button
+                                                    onClick={() => handleDisconnectAccount('discord')}
+                                                    className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
+                                                >
+                                                    Desconectar
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => window.location.href = `http://localhost:3001/auth/discord?userId=${user.id}`}
+                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+                                                >
+                                                    Conectar
+                                                </Button>
+                                            )}
                                         </div>
-                                        <div>
-                                            <label className="block text-xs text-cyan-300 font-bold mb-2">TWITTER</label>
-                                            <Input 
-                                                value={twitterHandle}
-                                                onChange={(e) => setTwitterHandle(e.target.value)}
-                                                placeholder="Tu handle de Twitter"
-                                                className="bg-blue-950/50 border-blue-500/30 text-white"
-                                            />
+
+                                        {/* Twitter */}
+                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">🐦</span>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">Twitter (X)</p>
+                                                    {twitterHandle ? (
+                                                        <p className="text-xs text-cyan-400">@{twitterHandle.replace('@', '')}</p>
+                                                    ) : (
+                                                        <p className="text-xs text-gray-400">No conectado</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {twitterHandle ? (
+                                                <div className="flex gap-2">
+                                                    <a 
+                                                        href={`https://twitter.com/${twitterHandle.replace('@', '')}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-3 py-1 text-xs bg-blue-600/50 hover:bg-blue-600 text-white rounded-md transition-colors"
+                                                    >
+                                                        Ver perfil
+                                                    </a>
+                                                    <Button
+                                                        onClick={() => handleDisconnectAccount('twitter')}
+                                                        className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
+                                                    >
+                                                        Desconectar
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => window.location.href = `http://localhost:3001/auth/twitter?userId=${user.id}`}
+                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-400 hover:to-blue-400 text-white shadow-[0_0_15px_rgba(14,165,233,0.4)]"
+                                                >
+                                                    Conectar
+                                                </Button>
+                                            )}
                                         </div>
-                                        <div>
-                                            <label className="block text-xs text-cyan-300 font-bold mb-2">TWITCH</label>
-                                            <Input 
-                                                value={twitchUsername}
-                                                onChange={(e) => setTwitchUsername(e.target.value)}
-                                                placeholder="Tu nombre de Twitch"
-                                                className="bg-blue-950/50 border-blue-500/30 text-white"
-                                            />
+
+                                        {/* Twitch */}
+                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">📺</span>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">Twitch</p>
+                                                    {twitchUsername ? (
+                                                        <p className="text-xs text-cyan-400">{twitchUsername}</p>
+                                                    ) : (
+                                                        <p className="text-xs text-gray-400">No conectado</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {twitchUsername ? (
+                                                <div className="flex gap-2">
+                                                    <a 
+                                                        href={`https://www.twitch.tv/${twitchUsername}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-3 py-1 text-xs bg-purple-600/50 hover:bg-purple-600 text-white rounded-md transition-colors"
+                                                    >
+                                                        Ver canal
+                                                    </a>
+                                                    <Button
+                                                        onClick={() => handleDisconnectAccount('twitch')}
+                                                        className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
+                                                    >
+                                                        Desconectar
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => window.location.href = `http://localhost:3001/auth/twitch?userId=${user.id}`}
+                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.4)]"
+                                                >
+                                                    Conectar
+                                                </Button>
+                                            )}
                                         </div>
-                                        <div>
-                                            <label className="block text-xs text-cyan-300 font-bold mb-2">TIKTOK</label>
-                                            <Input 
-                                                value={tiktokHandle}
-                                                onChange={(e) => setTiktokHandle(e.target.value)}
-                                                placeholder="Tu handle de TikTok"
-                                                className="bg-blue-950/50 border-blue-500/30 text-white"
-                                            />
+
+                                        {/* TikTok */}
+                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">🎵</span>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">TikTok</p>
+                                                    {tiktokHandle ? (
+                                                        <p className="text-xs text-cyan-400">@{tiktokHandle.replace('@', '')}</p>
+                                                    ) : (
+                                                        <p className="text-xs text-gray-400">No conectado</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {tiktokHandle ? (
+                                                <div className="flex gap-2">
+                                                    <a 
+                                                        href={`https://www.tiktok.com/@${tiktokHandle.replace('@', '')}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-3 py-1 text-xs bg-pink-600/50 hover:bg-pink-600 text-white rounded-md transition-colors"
+                                                    >
+                                                        Ver perfil
+                                                    </a>
+                                                    <Button
+                                                        onClick={() => handleDisconnectAccount('tiktok')}
+                                                        className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
+                                                    >
+                                                        Desconectar
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => window.location.href = `http://localhost:3001/auth/tiktok?userId=${user.id}`}
+                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white shadow-[0_0_15px_rgba(236,72,153,0.4)]"
+                                                >
+                                                    Conectar
+                                                </Button>
+                                            )}
                                         </div>
-                                        <Button 
-                                            onClick={handleSaveConnectedAccounts}
-                                            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(34,211,238,0.4)]"
-                                        >
-                                            <RefreshCw className="h-4 w-4 mr-2" /> Guardar Cuentas Conectadas
-                                        </Button>
                                     </div>
                                 </Card>
                             </div>

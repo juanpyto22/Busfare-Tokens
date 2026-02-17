@@ -55,51 +55,71 @@ const Teams = () => {
             return;
         }
 
-        const team = db.createTeam(newTeamName.trim());
-        const updatedTeams = await db.getTeams(user.id);
-        setTeams(updatedTeams);
-        setShowModal(false);
-        setNewTeamName("");
-        setTeamType("1v1");
-        setInviteUser("");
-        toast({ title: "Equipo Creado", description: `Has fundado el equipo ${team.name} (${teamType})` });
+        try {
+            const team = await db.createTeam(newTeamName.trim());
+            const updatedTeams = await db.getTeams(user.id);
+            setTeams(updatedTeams);
+            setShowModal(false);
+            setNewTeamName("");
+            setTeamType("1v1");
+            setInviteUser("");
+            toast({ title: "Equipo Creado", description: `Has fundado el equipo ${team.name} (${teamType})` });
+        } catch (error) {
+            console.error('Error creating team:', error);
+            toast({ title: "Error", description: "Error al crear el equipo", variant: "destructive" });
+        }
     };
 
     const handleDeleteTeam = async (teamId) => {
-        db.deleteTeam(teamId);
-        const updatedTeams = await db.getTeams(user.id);
-        setTeams(updatedTeams);
-        setShowSettingsModal(false);
-        toast({ title: "Equipo Eliminado", description: "El equipo ha sido eliminado" });
+        try {
+            await db.deleteTeam(teamId);
+            const updatedTeams = await db.getTeams(user.id);
+            setTeams(updatedTeams);
+            setShowSettingsModal(false);
+            toast({ title: "Equipo Eliminado", description: "El equipo ha sido eliminado" });
+        } catch (error) {
+            console.error('Error deleting team:', error);
+            toast({ title: "Error", description: "Error al eliminar el equipo", variant: "destructive" });
+        }
     };
 
     const handleRemoveTeamMember = async (teamId, memberName) => {
-        db.removeTeamMember(teamId, memberName);
-        const updatedTeams = await db.getTeams(user.id);
-        setTeams(updatedTeams);
-        toast({ title: "Miembro Expulsado", description: `${memberName} ha sido expulsado del equipo` });
+        try {
+            await db.removeTeamMember(teamId, memberName);
+            const updatedTeams = await db.getTeams(user.id);
+            setTeams(updatedTeams);
+            toast({ title: "Miembro Expulsado", description: `${memberName} ha sido expulsado del equipo` });
+        } catch (error) {
+            console.error('Error removing team member:', error);
+            toast({ title: "Error", description: "Error al expulsar miembro", variant: "destructive" });
+        }
     };
 
-    const handleInviteTeamMember = (teamId) => {
+    const handleInviteTeamMember = async (teamId) => {
         if (!inviteNewUser.trim()) {
             toast({ title: "Error", description: "Ingresa un nombre de usuario", variant: "destructive" });
             return;
         }
         
-        const team = teams.find(t => t.id === teamId);
-        const result = db.sendTeamInvitation(teamId, inviteNewUser, user.username);
-        
-        if (!result.success) {
-            toast({ title: "Error", description: result.error, variant: "destructive" });
-            return;
+        try {
+            const team = teams.find(t => t.id === teamId);
+            const result = await db.sendTeamInvitation(teamId, inviteNewUser, user.username);
+            
+            if (!result.success) {
+                toast({ title: "Error", description: result.error, variant: "destructive" });
+                return;
+            }
+            
+            setInviteNewUser("");
+            toast({ 
+                title: "Invitación Enviada", 
+                description: `Se ha enviado una invitación a ${result.user.username}`,
+                className: "bg-green-600 text-white"
+            });
+        } catch (error) {
+            console.error('Error sending team invitation:', error);
+            toast({ title: "Error", description: "Error al enviar invitación", variant: "destructive" });
         }
-        
-        setInviteNewUser("");
-        toast({ 
-            title: "Invitación Enviada", 
-            description: `Se ha enviado una invitación a ${result.user.username}`,
-            className: "bg-green-600 text-white"
-        });
     };
 
     return (

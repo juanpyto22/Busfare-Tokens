@@ -153,7 +153,28 @@ const Matches = () => {
     useEffect(() => {
         const fetchMatches = async () => {
              const session = db.getSession();
-             setUser(session);
+             
+             // Obtener datos actualizados del usuario desde localStorage
+             if (session) {
+                 const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
+                 const updatedUser = allUsers.find(u => u.id === session.id);
+                 let finalUser = updatedUser || session;
+                 
+                 // Si el usuario no tiene tokens, darle algunos tokens iniciales
+                 if (!finalUser.tokens || finalUser.tokens === 0) {
+                     finalUser.tokens = 10; // 10 tokens iniciales
+                     // Actualizar en localStorage
+                     if (updatedUser) {
+                         const userIndex = allUsers.findIndex(u => u.id === session.id);
+                         if (userIndex !== -1) {
+                             allUsers[userIndex] = finalUser;
+                             localStorage.setItem('fortnite_platform_users', JSON.stringify(allUsers));
+                         }
+                     }
+                 }
+                 
+                 setUser(finalUser);
+             }
              
              // Filtrar partidas que no hayan expirado (30 minutos)
              const allMatches = await db.getMatches();
@@ -244,7 +265,7 @@ const Matches = () => {
         }
 
         // Verificar que el usuario tenga suficientes tokens
-        const userBalance = user.balance || 0;
+        const userBalance = user.tokens || 0;
         
         // Validar mínimo de entrada
         if (newMatch.entryFee < 0.5) {

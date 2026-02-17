@@ -40,14 +40,16 @@ const ModeratorPanel = () => {
         loadData();
     }, [navigate]);
 
-    const loadData = () => {
-        setDisputedMatches(db.getDisputedMatches());
-        setReports(db.getAllReports().filter(r => !r.reviewed));
+    const loadData = async () => {
+        const disputes = await db.getPendingDisputes();
+        const allReports = await db.getAllReports();
+        setDisputedMatches(disputes);
+        setReports(allReports.filter(r => r.status === 'pending'));
     };
 
-    const handleResolveDispute = (matchId, winnerId) => {
+    const handleResolveDispute = async (reportId, winnerId) => {
         const notes = prompt('Notas de resolución (opcional):');
-        const result = db.resolveDispute(matchId, winnerId, currentUser.id, notes || '');
+        const result = await db.resolveDispute(reportId, notes || '', currentUser.id, winnerId);
         
         if (result.success) {
             toast({
@@ -66,18 +68,25 @@ const ModeratorPanel = () => {
         }
     };
 
-    const handleReviewReport = (reportId, action) => {
+    const handleReviewReport = async (reportId, action) => {
         const notes = prompt('Notas de revisión (opcional):');
-        const result = db.reviewReport(reportId, action, currentUser.id, notes || '');
+        const winnerId = action === 'approved' ? window.prompt('ID del ganador (si aplica):') : null;
+        const result = await db.resolveDispute(reportId, notes || '', currentUser.id, winnerId);
         
         if (result.success) {
             toast({
-                title: action === 'approved' ? "Reporte Aprobado" : "Reporte Rechazado",
+                title: action === 'approved' ? "Reporte Aprobado" : "Reporte Procesado",
                 description: "El reporte ha sido procesado",
-                className: action === 'approved' ? "bg-green-950 border-green-800 text-white" : "bg-blue-950 border-blue-800 text-white"
+                className: "bg-green-950 border-green-800 text-white"
             });
             setShowReportDialog(false);
             loadData();
+        } else {
+            toast({
+                title: "Error",
+                description: result.error,
+                variant: "destructive"
+            });
         }
     };
 
@@ -144,59 +153,65 @@ const ModeratorPanel = () => {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {disputedMatches.map((match) => (
+                                {disputedMatches.map((dispute) => (
                                     <div
-                                        key={match.id}
+                                        key={dispute.id}
                                         className="p-4 rounded-lg border bg-red-950/30 border-red-500/30 hover:scale-105 transition-all"
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-3 mb-2">
-                                                    <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full font-bold">
-                                                        EN DISPUTA
+                                                    <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse">
+                                                        DISPUTA
                                                     </span>
                                                     <p className="text-white font-bold">
-                                                        {match.type} {match.mode}
+                                                        {dispute.match?.game_mode || 'Match'} - #{dispute.match_id}
                                                     </p>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                                     <div>
-                                                        <p className="text-blue-200/60">Jugadores:</p>
-                                                        {match.players.map((p, i) => (
-                                                            <p key={i} className="text-white">{p.name}</p>
-                                                        ))}
+                                                        <p className="text-blue-200/60">Reportado por:</p>
+                                                        <p className="text-white">{dispute.reporter?.username || 'Usuario'}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-blue-200/60">Resultados reportados:</p>
-                                                        {match.results && Object.entries(match.results).map(([userId, result], i) => {
-                                                            const player = match.players.find(p => p.id === userId);
-                                                            return (
-                                                                <p key={i} className="text-yellow-300">
-                                                                    {player?.name}: Ganador {result.winnerId}
-                                                                </p>
-                                                            );
-                                                        })}
+                                                        <p className="text-blue-200/60">Razón:</p>
+                                                        <p className="text-yellow-300">{dispute.reason}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-blue-200/60">Premio:</p>
-                                                        <p className="text-green-400 font-bold">{match.prize} 🪙</p>
+                                                        <p className="text-blue-200/60">Apuesta:</p>
+                                                        <p className="text-cyan-400">{dispute.match?.bet_amount || 0} tokens</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-blue-200/60">Región:</p>
-                                                        <p className="text-cyan-400">{match.region}</p>
+                                                        <p className="text-blue-200/60">Fecha:</p>
+                                                        <p className="text-blue-300 text-xs">
+                                                            {new Date(dispute.created_at).toLocaleString('es-ES')}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex items-center gap-2">
+                                                {dispute.evidence && (
+                                                    <Button
+                                                        onClick={() => window.open(dispute.evidence, '_blank')}
+                                                        variant="outline"
+                                                        className="border-blue-500/30"
+                                                        size="sm"
+                                                    >
+                                                        <Eye className="h-4 w-4 mr-1" />
+                                                        Ver Evidencia
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     onClick={() => {
-                                                        setSelectedMatch(match);
+                                                        setSelectedMatch(dispute.match);
+                                                        setSelectedReport(dispute);
                                                         setShowMatchDialog(true);
                                                     }}
                                                     className="bg-purple-600 hover:bg-purple-700"
+                                                    size="sm"
                                                 >
-                                                    <Eye className="h-4 w-4 mr-2" />
-                                                    Revisar y Resolver
+                                                    <Scale className="h-4 w-4 mr-1" />
+                                                    Resolver
                                                 </Button>
                                             </div>
                                         </div>
@@ -235,17 +250,17 @@ const ModeratorPanel = () => {
                                                         PENDIENTE
                                                     </span>
                                                     <p className="text-white font-bold">
-                                                        Reporte #{report.id}
+                                                        Reporte #{report.id.slice(0, 8)}
                                                     </p>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                                     <div>
                                                         <p className="text-blue-200/60">Reportado por:</p>
-                                                        <p className="text-white">{report.reporterName || 'Usuario'}</p>
+                                                        <p className="text-white">{report.reporter?.username || 'Usuario'}</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-blue-200/60">Usuario reportado:</p>
-                                                        <p className="text-red-400">{report.reportedName || 'ID: ' + report.reportedId}</p>
+                                                        <p className="text-red-400">{report.reported_user?.username || 'N/A'}</p>
                                                     </div>
                                                     <div className="col-span-2">
                                                         <p className="text-blue-200/60">Razón:</p>
@@ -254,18 +269,28 @@ const ModeratorPanel = () => {
                                                     <div>
                                                         <p className="text-blue-200/60">Fecha:</p>
                                                         <p className="text-blue-300 text-xs">
-                                                            {new Date(report.timestamp).toLocaleString('es-ES')}
+                                                            {new Date(report.created_at).toLocaleString('es-ES')}
                                                         </p>
                                                     </div>
-                                                    {report.matchId && (
+                                                    {report.match_id && (
                                                         <div>
                                                             <p className="text-blue-200/60">Match ID:</p>
-                                                            <p className="text-cyan-400">{report.matchId}</p>
+                                                            <p className="text-cyan-400">{report.match_id.slice(0, 8)}</p>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
+                                                {report.evidence && (
+                                                    <Button
+                                                        onClick={() => window.open(report.evidence, '_blank')}
+                                                        variant="outline"
+                                                        className="border-blue-500/30"
+                                                        size="sm"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     onClick={() => handleReviewReport(report.id, 'approved')}
                                                     className="bg-green-600 hover:bg-green-700"
@@ -298,35 +323,58 @@ const ModeratorPanel = () => {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Scale className="h-5 w-5 text-purple-400" />
-                            Resolver Disputa - Match #{selectedMatch?.id}
+                            Resolver Disputa - Match #{selectedMatch?.id?.slice(0, 8)}
                         </DialogTitle>
                     </DialogHeader>
-                    {selectedMatch && (
+                    {selectedMatch && selectedReport && (
                         <div className="space-y-4">
                             <div className="p-4 bg-red-950/30 rounded-lg border border-red-500/30">
                                 <p className="text-red-300 text-sm mb-2">
-                                    Los jugadores reportaron ganadores diferentes. Revisa la evidencia y selecciona al ganador real.
+                                    <strong>Razón:</strong> {selectedReport.reason}
                                 </p>
+                                {selectedReport.evidence && (
+                                    <Button
+                                        onClick={() => window.open(selectedReport.evidence, '_blank')}
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-2"
+                                    >
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        Ver Evidencia
+                                    </Button>
+                                )}
                             </div>
                             
                             <div className="space-y-3">
                                 <h3 className="text-white font-bold">Selecciona al Ganador:</h3>
-                                {selectedMatch.players.map((player) => (
-                                    <Button
-                                        key={player.id}
-                                        onClick={() => handleResolveDispute(selectedMatch.id, player.id)}
-                                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 h-14"
-                                    >
-                                        <CheckCircle className="mr-2 h-5 w-5" />
-                                        {player.name} es el Ganador
-                                    </Button>
-                                ))}
+                                <Button
+                                    onClick={() => handleResolveDispute(selectedReport.id, selectedMatch.player1_id)}
+                                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 h-14"
+                                >
+                                    <CheckCircle className="mr-2 h-5 w-5" />
+                                    Jugador 1 es el Ganador
+                                </Button>
+                                <Button
+                                    onClick={() => handleResolveDispute(selectedReport.id, selectedMatch.player2_id)}
+                                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 h-14"
+                                >
+                                    <CheckCircle className="mr-2 h-5 w-5" />
+                                    Jugador 2 es el Ganador
+                                </Button>
+                                <Button
+                                    onClick={() => handleResolveDispute(selectedReport.id, null)}
+                                    variant="outline"
+                                    className="w-full border-yellow-500/50 text-yellow-400"
+                                >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Cancelar Match (Devolver Tokens)
+                                </Button>
                             </div>
 
                             <div className="p-4 bg-blue-950/30 rounded-lg border border-blue-500/30">
                                 <p className="text-blue-200 text-sm">
-                                    <strong>Premio:</strong> {selectedMatch.prize} tokens<br />
-                                    <strong>Tipo:</strong> {selectedMatch.type} {selectedMatch.mode}<br />
+                                    <strong>Premio:</strong> {selectedMatch.bet_amount * 2} tokens<br />
+                                    <strong>Tipo:</strong> {selectedMatch.game_mode}<br />
                                     <strong>Región:</strong> {selectedMatch.region}
                                 </p>
                             </div>
