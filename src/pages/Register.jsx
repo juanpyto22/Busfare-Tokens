@@ -33,8 +33,8 @@ const Register = () => {
                 className: "bg-green-600 text-white border-none"
             });
             
-            // Do not auto-login. Prompt user to verify their email first.
-            navigate('/verify-email');
+            // Redirigir al login tras registro exitoso
+            navigate('/login');
         } catch (err) {
             console.error('Error en registro:', err);
             toast({ 
