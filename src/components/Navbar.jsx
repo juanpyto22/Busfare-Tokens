@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import { useToast } from '@/components/ui/use-toast';
 import { useChat } from '@/contexts/ChatContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import BusLogo from '@/components/BusLogo';
+import logo from '../../img/logo.png';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   DropdownMenu,
@@ -108,9 +108,9 @@ const Navbar = () => {
         
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-                     <div className="transform group-hover:scale-110 transition-transform duration-300">
-                         <BusLogo className="h-16 w-16 object-contain" />
-                     </div>
+                                 <div className="transform group-hover:scale-110 transition-transform duration-300">
+                                     <img src={logo} alt="BusFare" className="h-16 w-16 object-contain" />
+                                 </div>
            <span className="text-lg font-black tracking-tighter text-white italic uppercase hidden md:block">
              BusFare<span className="text-blue-400">-tokens</span>
            </span>
