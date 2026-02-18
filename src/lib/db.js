@@ -51,6 +51,23 @@ export const db = {
         throw new Error('El nombre de usuario ya existe')
       }
 
+      // Comprobar que el correo está en la lista de correos autorizados (allowed_emails)
+      // Esto impide registros con correos no existentes/no permitidos.
+      const { data: allowedEntry, error: allowedError } = await supabase
+        .from('allowed_emails')
+        .select('email')
+        .eq('email', email)
+        .maybeSingle()
+
+      if (allowedError) {
+        // Si la tabla no existe o hay otro error, informar claramente
+        throw new Error('Error comprobando correos permitidos: ' + (allowedError.message || allowedError))
+      }
+
+      if (!allowedEntry) {
+        throw new Error('Registro no permitido: este correo no está en la lista de correos autorizados')
+      }
+
       // Crear usuario en Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
