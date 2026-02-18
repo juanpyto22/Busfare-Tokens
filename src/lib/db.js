@@ -23,15 +23,18 @@ export const db = {
         .single()
       
       if (userError) throw userError
-      
+
+      // If the user's email is not verified, prevent login
+      if (userData && userData.email_verified === false) {
+        throw new Error('Por favor verifica tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.')
+      }
+
       // Actualizar último login
       await supabase.from('users').update({ 
         last_login: new Date().toISOString() 
       }).eq('id', data.user.id)
-      
-  // Do not auto-login nor save session to localStorage here.
-  // The user must confirm their email (Supabase will send confirmation if configured).
-  return userData
+
+      return userData
     } catch (error) {
       throw new Error(error.message || 'Error al iniciar sesión')
     }
@@ -108,9 +111,16 @@ export const db = {
       
       if (userError) throw userError
       
-      // Guardar sesión en localStorage para compatibilidad
-      localStorage.setItem('fortnite_platform_session', JSON.stringify(userData))
-      
+      // If Supabase created an active session during signUp, sign out to avoid auto-login.
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        if (sessionData?.session) {
+          await supabase.auth.signOut()
+        }
+      } catch (e) {
+        // ignore signOut errors
+      }
+
       return userData
     } catch (error) {
       throw new Error(error.message || 'Error al registrarse')
