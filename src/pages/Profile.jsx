@@ -1045,7 +1045,7 @@ const Profile = () => {
                                                 </div>
                                             ) : (
                                                 <Button
-                                                    onClick={() => window.location.href = `http://localhost:3001/auth/epic?userId=${user.id}`}
+                                                    onClick={() => window.location.href = `/api/auth/epic?userId=${user.id}`}
                                                     className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]"
                                                 >
                                                     Conectar
@@ -1075,7 +1075,7 @@ const Profile = () => {
                                                 </Button>
                                             ) : (
                                                 <Button
-                                                    onClick={() => window.location.href = `http://localhost:3001/auth/discord?userId=${user.id}`}
+                                                    onClick={() => window.location.href = `/api/auth/discord?userId=${user.id}`}
                                                     className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
                                                 >
                                                     Conectar
@@ -1115,7 +1115,7 @@ const Profile = () => {
                                                 </div>
                                             ) : (
                                                 <Button
-                                                    onClick={() => window.location.href = `http://localhost:3001/auth/twitter?userId=${user.id}`}
+                                                    onClick={() => window.location.href = `/api/auth/twitter?userId=${user.id}`}
                                                     className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-400 hover:to-blue-400 text-white shadow-[0_0_15px_rgba(14,165,233,0.4)]"
                                                 >
                                                     Conectar
@@ -1155,7 +1155,7 @@ const Profile = () => {
                                                 </div>
                                             ) : (
                                                 <Button
-                                                    onClick={() => window.location.href = `http://localhost:3001/auth/twitch?userId=${user.id}`}
+                                                    onClick={() => window.location.href = `/api/auth/twitch?userId=${user.id}`}
                                                     className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.4)]"
                                                 >
                                                     Conectar
@@ -1195,7 +1195,7 @@ const Profile = () => {
                                                 </div>
                                             ) : (
                                                 <Button
-                                                    onClick={() => window.location.href = `http://localhost:3001/auth/tiktok?userId=${user.id}`}
+                                                    onClick={() => window.location.href = `/api/auth/tiktok?userId=${user.id}`}
                                                     className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white shadow-[0_0_15px_rgba(236,72,153,0.4)]"
                                                 >
                                                     Conectar
