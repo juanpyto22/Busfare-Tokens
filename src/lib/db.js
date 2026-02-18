@@ -21,8 +21,11 @@ export const db = {
         .select('*')
         .eq('id', data.user.id)
         .maybeSingle()
-      
+
       if (userError) throw userError
+      if (!userData) {
+        throw new Error('Usuario no encontrado o datos incompletos')
+      }
 
       // Actualizar último login
       await supabase.from('users').update({ 
