@@ -32,6 +32,9 @@ export const db = {
         last_login: new Date().toISOString() 
       }).eq('id', data.user.id)
 
+      // Guardar usuario en localStorage para la barra y la app
+      localStorage.setItem('fortnite_platform_session', JSON.stringify(userData));
+
       return userData
     } catch (error) {
       throw new Error(error.message || 'Error al iniciar sesión')
