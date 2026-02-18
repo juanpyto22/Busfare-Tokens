@@ -20,7 +20,7 @@ export const db = {
         .from('users')
         .select('*')
         .eq('id', data.user.id)
-        .single()
+        .maybeSingle()
       
       if (userError) throw userError
 
@@ -42,7 +42,7 @@ export const db = {
         .from('users')
         .select('username')
         .eq('username', username)
-        .single()
+        .maybeSingle()
       
       if (existingUser) {
         throw new Error('El nombre de usuario ya existe')
@@ -85,7 +85,7 @@ export const db = {
           two_factor_enabled: false
         })
         .select()
-        .single()
+        .maybeSingle()
       
       if (userError) throw userError
       
