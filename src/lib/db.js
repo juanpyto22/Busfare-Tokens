@@ -24,11 +24,6 @@ export const db = {
       
       if (userError) throw userError
 
-      // If the user's email is not verified, prevent login
-      if (userData && userData.email_verified === false) {
-        throw new Error('Por favor verifica tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.')
-      }
-
       // Actualizar último login
       await supabase.from('users').update({ 
         last_login: new Date().toISOString() 
