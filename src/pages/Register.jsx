@@ -33,8 +33,7 @@ const Register = () => {
                 className: "bg-green-600 text-white border-none"
             });
             
-            // Auto-login después de registro
-            await db.login(formData.email, formData.password);
+            // Do not auto-login. Prompt user to verify their email first.
             navigate('/verify-email');
         } catch (err) {
             console.error('Error en registro:', err);

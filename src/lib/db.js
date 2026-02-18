@@ -29,10 +29,9 @@ export const db = {
         last_login: new Date().toISOString() 
       }).eq('id', data.user.id)
       
-      // Guardar sesión en localStorage para compatibilidad
-      localStorage.setItem('fortnite_platform_session', JSON.stringify(userData))
-      
-      return userData
+  // Do not auto-login nor save session to localStorage here.
+  // The user must confirm their email (Supabase will send confirmation if configured).
+  return userData
     } catch (error) {
       throw new Error(error.message || 'Error al iniciar sesión')
     }
