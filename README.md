@@ -13,7 +13,7 @@ Plataforma de apuestas de tokens para partidas de Fortnite con sistema de pagos 
 - 📱 Diseño responsive
 
 ## 🛠️ Tecnologías
-
+aa
 ### Frontend
 - React 18 + Vite
 - TailwindCSS + Radix UI
