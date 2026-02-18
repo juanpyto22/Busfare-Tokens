@@ -296,6 +296,8 @@ const Matches = () => {
                 description: "Tu partida está lista. Espera a que alguien se una.", 
                 className: "bg-green-600 text-white border-none" 
             });
+            // Refrescar lista de matches inmediatamente
+            await fetchMatches();
             navigate(`/match/${match.id}`);
         } catch (error) {
             console.error('Error al crear match:', error);
