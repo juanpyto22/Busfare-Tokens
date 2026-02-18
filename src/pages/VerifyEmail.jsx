@@ -67,21 +67,24 @@ const VerifyEmail = () => {
         }
     };
 
-    const handleResendCode = () => {
-        // Generar nuevo código
-        const newCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
-        const userIndex = allUsers.findIndex(u => u.id === user.id);
-        
-        if (userIndex !== -1) {
-            allUsers[userIndex].verificationCode = newCode;
-            localStorage.setItem('fortnite_platform_users', JSON.stringify(allUsers));
-            
+    const handleResendCode = async () => {
+        try {
+            const response = await fetch('/api/resend-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: user.email })
+            })
+
+            const data = await response.json()
+            if (!response.ok) throw new Error(data?.error || 'Error al reenviar')
+
             toast({
-                title: "Código Reenviado",
-                description: `Tu nuevo código es: ${newCode}`,
-                className: "bg-blue-950 border-blue-800 text-white"
-            });
+                title: 'Correo reenviado',
+                description: 'Revisa tu buzón para confirmar tu correo.',
+                className: 'bg-blue-950 border-blue-800 text-white'
+            })
+        } catch (err) {
+            toast({ title: 'Error', description: err.message || 'Error reenviando correo', variant: 'destructive' })
         }
     };
 
