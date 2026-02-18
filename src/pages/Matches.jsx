@@ -97,8 +97,8 @@ const Matches = () => {
 
         // Filtrar según la pestaña activa
         if (activeTab === 'available') {
-            // Mostrar matches en estado 'waiting'
-            filtered = filtered.filter(m => m.status === 'waiting');
+            // Mostrar matches en estado 'pending' (disponibles para unirse)
+            filtered = filtered.filter(m => m.status === 'pending');
         } else if (activeTab === 'ongoing') {
             // En 'ongoing': todos los matches en los que participo que ya tienen 2+ jugadores o están started/ready
             if (user) {
