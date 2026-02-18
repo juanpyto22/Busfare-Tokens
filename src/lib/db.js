@@ -302,7 +302,7 @@ export const db = {
         mode: match.game_mode,
         entryFee: match.bet_amount / 100, // Convert from cents
         region: match.region,
-        status: match.status === 'pending' ? 'waiting' : match.status,
+        status: match.status, // Mantener status 'pending' para matches disponibles
         players: [
           match.player1 ? { id: match.player1.id, name: match.player1.username } : null,
           match.player2 ? { id: match.player2.id, name: match.player2.username } : null
