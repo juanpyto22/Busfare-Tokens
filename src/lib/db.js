@@ -80,7 +80,6 @@ export const db = {
           current_streak: 0,
           best_streak: 0,
           level: 1,
-          experience: 0,
           reputation: 100,
           trust_score: 100,
           reported_count: 0,
