@@ -27,6 +27,15 @@ const Profile = () => {
     const [teams, setTeams] = useState([]);
     const [matchHistory, setMatchHistory] = useState([]);
     
+    // Rankings state
+    const [rankings, setRankings] = useState({
+        overall: 0,
+        earnings: 0,
+        winRate: 0,
+        gamesPlayed: 0,
+        totalUsers: 0
+    });
+    
     // Tip modal states
     const [tipModalOpen, setTipModalOpen] = useState(false);
     const [tipUsername, setTipUsername] = useState('');
@@ -51,6 +60,9 @@ const Profile = () => {
 
         // Load match history from user's actual matches
         loadMatchHistory();
+
+        // Load rankings
+        loadRankings();
     }, [navigate]);
 
     const loadSocialAccounts = async () => {
@@ -76,6 +88,19 @@ const Profile = () => {
         if (!session) return;
         const history = await db.getUserMatchHistory(session.id);
         setMatchHistory(history);
+    };
+
+    const loadRankings = async () => {
+        const session = db.getSession();
+        if (!session) return;
+        
+        try {
+            const userRankings = await db.getUserRankings(session.id);
+            setRankings(userRankings);
+        } catch (error) {
+            console.error('Error cargando rankings:', error);
+            // Si falla, mantener los valores en 0 (será posición 1 si no hay otros usuarios)
+        }
     };
 
     const handleDiscordLogin = () => {
@@ -639,26 +664,31 @@ const Profile = () => {
                                             <h3 className="text-xl font-bold text-white text-glow">Competitive Ranking</h3>
                                         </div>
                                         <div className="bg-cyan-500/20 border border-cyan-500/40 rounded-lg px-4 py-2">
-                                            <span className="text-cyan-300 font-bold text-lg">Rank #{Math.floor(Math.random() * 5000) + 1}</span>
+                                            <span className="text-cyan-300 font-bold text-lg">Rank #{rankings.overall || 1}</span>
                                         </div>
                                     </div>
                                     <div className="grid md:grid-cols-3 gap-6">
                                         <div className="text-center p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg">
                                             <div className="text-sm text-blue-300/70 mb-2">Earnings Rank</div>
-                                            <div className="text-2xl font-black text-cyan-400">#{Math.floor(Math.random() * 3000) + 1}</div>
+                                            <div className="text-2xl font-black text-cyan-400">#{rankings.earnings || 1}</div>
                                             <div className="text-xs text-blue-300/60 mt-1">Top earners</div>
                                         </div>
                                         <div className="text-center p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg">
                                             <div className="text-sm text-blue-300/70 mb-2">Win Rate Rank</div>
-                                            <div className="text-2xl font-black text-cyan-400">#{Math.floor(Math.random() * 4000) + 1}</div>
+                                            <div className="text-2xl font-black text-cyan-400">#{rankings.winRate || 1}</div>
                                             <div className="text-xs text-blue-300/60 mt-1">Best performers</div>
                                         </div>
                                         <div className="text-center p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg">
                                             <div className="text-sm text-blue-300/70 mb-2">Games Played Rank</div>
-                                            <div className="text-2xl font-black text-cyan-400">#{Math.floor(Math.random() * 6000) + 1}</div>
+                                            <div className="text-2xl font-black text-cyan-400">#{rankings.gamesPlayed || 1}</div>
                                             <div className="text-xs text-blue-300/60 mt-1">Most active</div>
                                         </div>
                                     </div>
+                                    {rankings.totalUsers > 0 && (
+                                        <div className="text-center mt-4 text-xs text-blue-300/50">
+                                            De {rankings.totalUsers} jugadores registrados
+                                        </div>
+                                    )}
                                 </Card>
                             </div>
                         )}

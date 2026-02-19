@@ -36,39 +36,47 @@ const MatchDetail = () => {
     }, []);
 
     useEffect(() => {
-        const fetchData = () => {
+        const fetchData = async () => {
             const session = db.getSession();
             if (!session) {
                 navigate('/login');
                 return;
             }
             
-            // Obtener datos actualizados del usuario desde localStorage
-            const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
-            const updatedUser = allUsers.find(u => u.id === session.id);
-            setUser(updatedUser || session);
+            setUser(session);
             
-            const m = db.getMatch(id);
-            if (m) {
-                setMatch(m);
-                // Inicializar ready status desde la base de datos
-                if (m.playersReady) {
-                    setPlayerReadyStatus(m.playersReady);
+            try {
+                const m = await db.getMatchById(id);
+                console.log('Match obtenido:', m);
+                if (m) {
+                    setMatch(m);
+                    if (m.playersReady) {
+                        setPlayerReadyStatus(m.playersReady);
+                    }
+                } else {
+                    console.error('Match no encontrado');
                 }
+            } catch (error) {
+                console.error('Error cargando match:', error);
             }
             setIsLoading(false);
         };
         fetchData();
-        const interval = setInterval(() => {
-            const m = db.getMatch(id);
-            if (m) {
-                setMatch(m);
-                // Actualizar ready status desde la base de datos
-                if (m.playersReady) {
-                    setPlayerReadyStatus(m.playersReady);
+        
+        // Polling para actualizaciones
+        const interval = setInterval(async () => {
+            try {
+                const m = await db.getMatchById(id);
+                if (m) {
+                    setMatch(m);
+                    if (m.playersReady) {
+                        setPlayerReadyStatus(m.playersReady);
+                    }
                 }
+            } catch (error) {
+                console.error('Error actualizando match:', error);
             }
-        }, 1000);
+        }, 3000);
         return () => clearInterval(interval);
     }, [id, navigate]);
 

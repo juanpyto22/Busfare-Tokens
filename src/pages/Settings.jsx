@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { User, BarChart3, Users, History, CreditCard, Crown, Settings as SettingsIcon, RefreshCw, Bell, Shield, Eye, EyeOff, Mail, Lock, Globe, Monitor } from 'lucide-react';
 import { Helmet } from 'react-helmet';
+import AvatarEditor, { generateAvatarUrl } from '@/components/AvatarEditor';
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -31,6 +32,8 @@ const Settings = () => {
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [matchAlerts, setMatchAlerts] = useState(true);
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+    const [showAvatarEditor, setShowAvatarEditor] = useState(false);
+    const [avatarConfig, setAvatarConfig] = useState(null);
 
     useEffect(() => {
         const session = db.getSession();
@@ -49,6 +52,13 @@ const Settings = () => {
         setTwitterHandle(savedLinks.twitter || '');
         setTwitchUsername(savedLinks.twitch || '');
         setTiktokHandle(savedLinks.tiktok || '');
+        
+        // Cargar configuración de avatar
+        const loadAvatarConfig = async () => {
+            const config = await db.getAvatarConfig(session.id);
+            setAvatarConfig(config);
+        };
+        loadAvatarConfig();
     }, [navigate]);
 
     const handleDiscordLogin = () => {
@@ -247,12 +257,15 @@ const Settings = () => {
                                             </label>
                                             <div className="flex items-center gap-4">
                                                 <img 
-                                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} 
+                                                    src={generateAvatarUrl(avatarConfig ? { ...avatarConfig, seed: user.username } : { seed: user.username })} 
                                                     alt="Avatar" 
                                                     className="h-24 w-24 rounded-full border-4 border-cyan-500 bg-blue-950/50 shadow-[0_0_20px_rgba(34,211,238,0.5)]"
                                                 />
                                                 <div className="flex gap-3">
-                                                    <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]">
+                                                    <Button 
+                                                        onClick={() => setShowAvatarEditor(true)}
+                                                        className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]"
+                                                    >
                                                         Personalizar
                                                     </Button>
                                                     <Button variant="outline" className="bg-transparent border-blue-500/30 text-blue-300 hover:bg-blue-950/30 hover:border-cyan-400/60">
@@ -597,6 +610,17 @@ const Settings = () => {
                     </div>
                 </div>
             </div>
+            
+            {/* Avatar Editor Modal */}
+            {user && (
+                <AvatarEditor 
+                    open={showAvatarEditor}
+                    onOpenChange={setShowAvatarEditor}
+                    userId={user.id}
+                    username={user.username}
+                    onSave={(newConfig) => setAvatarConfig(newConfig)}
+                />
+            )}
         </div>
     );
 };

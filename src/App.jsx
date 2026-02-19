@@ -18,7 +18,6 @@ import Settings from '@/pages/Settings';
 import Statistics from '@/pages/Statistics';
 import Transactions from '@/pages/Transactions';
 import Withdrawals from '@/pages/Withdrawals';
-import VerifyEmail from '@/pages/VerifyEmail';
 import AdminPanel from '@/pages/AdminPanel';
 import ModeratorPanel from '@/pages/ModeratorPanel';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -54,7 +53,6 @@ const AppContent = () => {
                     <Route path="/statistics" element={<Statistics />} />
                     <Route path="/transactions" element={<Transactions />} />
                     <Route path="/withdrawals" element={<Withdrawals />} />
-                    <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route path="/admin" element={<AdminPanel />} />
                     <Route path="/moderator" element={<ModeratorPanel />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />

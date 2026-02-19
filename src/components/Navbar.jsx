@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Coins, User, LogOut, Shield, Swords, Users, Trophy, Wallet, Settings, Bell, Check, X, Languages, Mail, AlertCircle, Scale } from 'lucide-react';
+import { Coins, User, LogOut, Shield, Swords, Users, Trophy, Wallet, Settings, Bell, Check, X, Languages, AlertCircle, Scale } from 'lucide-react';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -38,21 +38,55 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    // Load notifications from localStorage
-    if (user) {
-      const savedNotifications = JSON.parse(localStorage.getItem(`notifications_${user.id}`) || '[]');
-      setNotifications(savedNotifications);
-    }
+    // Load notifications from Supabase
+    const loadNotifications = async () => {
+      if (user) {
+        try {
+          const notifs = await db.getNotifications(user.id);
+          // Transform Supabase format to component format
+          const transformed = notifs.map(n => ({
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            message: n.message,
+            teamId: n.team_id,
+            teamName: n.team_name,
+            matchId: n.match_id,
+            invitedBy: n.from_username,
+            fromUsername: n.from_username,
+            amount: n.amount,
+            timestamp: n.created_at,
+            read: n.read
+          }));
+          setNotifications(transformed);
+        } catch (error) {
+          console.error('Error loading notifications:', error);
+          // Fallback to localStorage
+          const savedNotifications = JSON.parse(localStorage.getItem(`notifications_${user.id}`) || '[]');
+          setNotifications(savedNotifications);
+        }
+      }
+    };
+    loadNotifications();
   }, [showNotifications, user]);
 
-  const handleMarkAsRead = (index) => {
+  const handleMarkAsRead = async (index) => {
+    const notification = notifications[index];
+    try {
+      await db.markNotificationAsRead(notification.id, user.id);
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
     const updatedNotifications = notifications.filter((_, i) => i !== index);
-    localStorage.setItem(`notifications_${user.id}`, JSON.stringify(updatedNotifications));
     setNotifications(updatedNotifications);
   };
 
-  const handleClearAll = () => {
-    localStorage.setItem(`notifications_${user.id}`, JSON.stringify([]));
+  const handleClearAll = async () => {
+    try {
+      await db.clearAllNotifications(user.id);
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+    }
     setNotifications([]);
     toast({
       title: "Notificaciones borradas",
@@ -60,31 +94,47 @@ const Navbar = () => {
     });
   };
 
-  const handleAcceptInvitation = (notification, index) => {
-    const result = db.acceptTeamInvitation(notification.teamId, user.id);
-    if (result.success) {
-      toast({
-        title: "¡Te has unido al equipo!",
-        description: `Ahora eres miembro de ${notification.teamName}`,
-        className: "bg-green-600 text-white"
-      });
-      handleMarkAsRead(index);
-    } else {
+  const handleAcceptInvitation = async (notification, index) => {
+    try {
+      const result = await db.acceptTeamInvitation(notification.teamId, user.id);
+      if (result.success) {
+        // Update notification status
+        await db.acceptInvitation(notification.id, user.id);
+        toast({
+          title: "¡Te has unido al equipo!",
+          description: `Ahora eres miembro de ${notification.teamName}`,
+          className: "bg-green-600 text-white"
+        });
+        handleMarkAsRead(index);
+      } else {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
       toast({
         title: "Error",
-        description: result.error,
+        description: "No se pudo aceptar la invitación",
         variant: "destructive"
       });
     }
   };
 
-  const handleRejectInvitation = (notification, index) => {
-    db.rejectTeamInvitation(notification.teamId, user.id);
-    toast({
-      title: "Invitación rechazada",
-      description: `Has rechazado la invitación a ${notification.teamName}`
-    });
-    handleMarkAsRead(index);
+  const handleRejectInvitation = async (notification, index) => {
+    try {
+      await db.rejectTeamInvitation(notification.teamId, user.id);
+      await db.rejectInvitation(notification.id, user.id);
+      toast({
+        title: "Invitación rechazada",
+        description: `Has rechazado la invitación a ${notification.teamName}`
+      });
+      handleMarkAsRead(index);
+    } catch (error) {
+      console.error('Error rejecting invitation:', error);
+    }
   };
 
   const handleLogout = () => {
@@ -144,17 +194,6 @@ const Navbar = () => {
         <div className="flex items-center gap-4">
             {user ? (
                 <>
-                    {/* Email Verification Banner */}
-                    {!user.emailVerified && (
-                        <Button
-                            onClick={() => navigate('/verify-email')}
-                            className="hidden md:flex items-center gap-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white h-8 text-xs animate-pulse"
-                        >
-                            <Mail className="h-4 w-4" />
-                            Verificar Email
-                        </Button>
-                    )}
-
                     {/* Wallet/Stats Display */}
                     <div className="hidden lg:flex items-center gap-3 bg-blue-950/30 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
                         <div className="flex items-center gap-2 pr-3 border-r border-blue-400/20">
@@ -214,16 +253,20 @@ const Navbar = () => {
                                         </div>
                                     ) : (
                                         notifications.map((notif, index) => (
-                                            <div key={index} className="p-3 rounded-lg bg-blue-950/30 border border-blue-500/30 hover:bg-blue-900/30 transition-colors">
+                                            <div key={notif.id || index} className="p-3 rounded-lg bg-blue-950/30 border border-blue-500/30 hover:bg-blue-900/30 transition-colors">
                                                 <div className="flex items-start justify-between gap-3 mb-2">
                                                     <div className="flex-1">
                                                         <p className="font-bold text-white text-sm">
-                                                            {notif.type === 'team_invitation' ? '🎮 Invitación de Equipo' : notif.title}
+                                                            {notif.type === 'team_invitation' && '🎮 Invitación de Equipo'}
+                                                            {notif.type === 'match_invitation' && '⚔️ Invitación a Match'}
+                                                            {notif.type === 'tip_received' && '💰 Tip Recibido'}
+                                                            {!['team_invitation', 'match_invitation', 'tip_received'].includes(notif.type) && (notif.title || '📢 Notificación')}
                                                         </p>
                                                         <p className="text-xs text-blue-200/70 mt-1">
-                                                            {notif.type === 'team_invitation' 
-                                                                ? `${notif.invitedBy} te ha invitado a unirte a ${notif.teamName}`
-                                                                : notif.message}
+                                                            {notif.type === 'team_invitation' && `${notif.invitedBy || notif.fromUsername} te ha invitado a unirte a ${notif.teamName}`}
+                                                            {notif.type === 'match_invitation' && `${notif.fromUsername} te ha invitado a un match`}
+                                                            {notif.type === 'tip_received' && `${notif.fromUsername} te ha enviado ${notif.amount} tokens`}
+                                                            {!['team_invitation', 'match_invitation', 'tip_received'].includes(notif.type) && notif.message}
                                                         </p>
                                                         <p className="text-xs text-blue-400/50 mt-1">
                                                             {new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -237,7 +280,7 @@ const Navbar = () => {
                                                         <X className="h-4 w-4" />
                                                     </button>
                                                 </div>
-                                                {notif.type === 'team_invitation' && (
+                                                {(notif.type === 'team_invitation' || notif.type === 'match_invitation') && (
                                                     <div className="flex gap-2 mt-2">
                                                         <Button
                                                             size="sm"

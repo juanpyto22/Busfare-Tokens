@@ -93,37 +93,77 @@ const Matches = () => {
     };
 
     const getFilteredMatches = () => {
+        console.log('=== FILTRANDO MATCHES ===');
+        console.log('Matches totales antes del filtro:', matches.length);
+        console.log('Pestaña activa:', activeTab);
+        console.log('Usuario actual:', user);
+        console.log('Todos los matches:', matches);
+        
         let filtered = [...matches];
+        console.log('Matches después de copiar:', filtered.length);
 
         // Filtrar según la pestaña activa
         if (activeTab === 'available') {
-            // Mostrar matches en estado 'pending' (disponibles para unirse)
-            filtered = filtered.filter(m => m.status === 'pending');
+            // PARTIDAS DISPONIBLES: Mostrar todos los matches con status='pending'
+            // Y que tengan espacio disponible (incluyendo los que crea el usuario)
+            console.log('Filtrando por estado pending (disponibles)...');
+            filtered = filtered.filter(m => {
+                const isPending = m.status === 'pending';
+                const playersCount = m.players ? m.players.length : 0;
+                const maxPlayers = m.maxPlayers || 2;
+                const hasSpace = playersCount < maxPlayers;
+                const isAvailable = isPending && hasSpace;
+                
+                console.log(`Match ${m.id}: 
+                    - status: ${m.status} (isPending: ${isPending})
+                    - jugadores: ${playersCount}/${maxPlayers} (hasSpace: ${hasSpace})
+                    - disponible: ${isAvailable}
+                    - hostId: ${m.hostId}
+                    - userId: ${user?.id}
+                `);
+                
+                return isAvailable;
+            });
+            console.log('Matches disponibles (pending con espacio):', filtered.length);
+            console.log('IDs de matches disponibles:', filtered.map(m => m.id));
         } else if (activeTab === 'ongoing') {
-            // En 'ongoing': todos los matches en los que participo que ya tienen 2+ jugadores o están started/ready
+            // PARTIDAS EN CURSO: Solo mostrar matches donde el usuario participó
+            // Y ambos jugadores ya están listos (status='ready' o 'started')
+            console.log('Filtrando por matches en curso (ambos listos)...');
             if (user) {
                 filtered = filtered.filter(m => {
-                    const isParticipant = m.players.some(p => p.id === user.id);
-                    const hasMultiplePlayers = m.players.length > 1;
-                    const isStartedOrReady = m.status === 'started' || m.status === 'ready';
-                    
-                    return isParticipant && (hasMultiplePlayers || isStartedOrReady);
+                    const isParticipant = m.players && m.players.some(p => p.id === user.id);
+                    const isReadyOrStarted = m.status === 'ready' || m.status === 'started';
+                    const included = isParticipant && isReadyOrStarted;
+                    console.log(`Match ${m.id}: participante=${isParticipant}, status=${m.status}, ready/started=${isReadyOrStarted}, incluido=${included}`);
+                    return included;
                 });
+            } else {
+                filtered = [];
             }
+            console.log('Matches en curso (ambos listos):', filtered.length);
         }
 
         // Apply filters
         if (filters.regions.length > 0) {
+            console.log('Aplicando filtro de regiones:', filters.regions);
             filtered = filtered.filter(m => filters.regions.includes(m.region));
+            console.log('Matches después de filtrar por región:', filtered.length);
         }
         if (filters.platforms.length > 0) {
+            console.log('Aplicando filtro de plataformas:', filters.platforms);
             filtered = filtered.filter(m => filters.platforms.includes(m.platform || 'ANY'));
+            console.log('Matches después de filtrar por plataforma:', filtered.length);
         }
         if (filters.gameModes.length > 0) {
+            console.log('Aplicando filtro de modos de juego:', filters.gameModes);
             filtered = filtered.filter(m => filters.gameModes.includes(m.mode));
+            console.log('Matches después de filtrar por modo:', filtered.length);
         }
         if (filters.teamSizes.length > 0) {
+            console.log('Aplicando filtro de tamaños de equipo:', filters.teamSizes);
             filtered = filtered.filter(m => filters.teamSizes.includes(m.type));
+            console.log('Matches después de filtrar por tamaño:', filtered.length);
         }
 
         // Apply sorting
@@ -150,48 +190,61 @@ const Matches = () => {
     const activeFiltersCount = filters.regions.length + filters.platforms.length + 
                                filters.gameModes.length + filters.teamSizes.length;
 
-    useEffect(() => {
-        const fetchMatches = async () => {
-             const session = db.getSession();
+    const fetchMatches = async () => {
+         console.log('=== INICIANDO fetchMatches ===');
+         const session = db.getSession();
+         console.log('Sesión actual:', session);
+         
+         // Obtener datos actualizados del usuario desde localStorage
+         if (session) {
+             const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
+             const updatedUser = allUsers.find(u => u.id === session.id);
+             let finalUser = updatedUser || session;
              
-             // Obtener datos actualizados del usuario desde localStorage
-             if (session) {
-                 const allUsers = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]');
-                 const updatedUser = allUsers.find(u => u.id === session.id);
-                 let finalUser = updatedUser || session;
-                 
-                 // Si el usuario no tiene tokens, darle algunos tokens iniciales
-                 if (!finalUser.tokens || finalUser.tokens === 0) {
-                     finalUser.tokens = 10; // 10 tokens iniciales
-                     // Actualizar en localStorage
-                     if (updatedUser) {
-                         const userIndex = allUsers.findIndex(u => u.id === session.id);
-                         if (userIndex !== -1) {
-                             allUsers[userIndex] = finalUser;
-                             localStorage.setItem('fortnite_platform_users', JSON.stringify(allUsers));
-                         }
+             // Si el usuario no tiene tokens, darle algunos tokens iniciales
+             if (!finalUser.tokens || finalUser.tokens === 0) {
+                 finalUser.tokens = 10; // 10 tokens iniciales
+                 // Actualizar en localStorage
+                 if (updatedUser) {
+                     const userIndex = allUsers.findIndex(u => u.id === session.id);
+                     if (userIndex !== -1) {
+                         allUsers[userIndex] = finalUser;
+                         localStorage.setItem('fortnite_platform_users', JSON.stringify(allUsers));
                      }
                  }
-                 
-                 setUser(finalUser);
              }
              
-             // Filtrar partidas que no hayan expirado (30 minutos)
-             const allMatches = await db.getMatches();
-             const now = Date.now();
-             const validMatches = allMatches.filter(match => {
-                 const expirationTime = match.createdAt + (30 * 60 * 1000);
-                 return now < expirationTime;
-             });
-             
-             setMatches(validMatches);
-             
-             // Cargar equipos del usuario desde localStorage
-             if (session) {
-                 const myTeams = await db.getTeams(session.id);
-                 setUserTeams(myTeams);
-             }
-        };
+             setUser(finalUser);
+             console.log('Usuario configurado:', finalUser);
+         }
+         
+         // Filtrar partidas que no hayan expirado (30 minutos)
+         console.log('Obteniendo matches de la base de datos...');
+         const allMatches = await db.getMatches();
+         console.log('Matches obtenidos:', allMatches.length, allMatches);
+         
+         const now = Date.now();
+         const validMatches = allMatches.filter(match => {
+             const expirationTime = match.createdAt + (30 * 60 * 1000);
+             const isValid = now < expirationTime;
+             console.log(`Match ${match.id}: creado=${new Date(match.createdAt).toLocaleString()}, expira=${new Date(expirationTime).toLocaleString()}, válido=${isValid}`);
+             return isValid;
+         });
+         
+         console.log('Matches válidos (no expirados):', validMatches.length, validMatches);
+         setMatches(validMatches);
+         
+         // Cargar equipos del usuario desde localStorage
+         if (session) {
+             const myTeams = await db.getTeams(session.id);
+             console.log('Equipos del usuario:', myTeams.length);
+             setUserTeams(myTeams);
+         }
+         
+         console.log('=== fetchMatches COMPLETADO ===');
+    };
+
+    useEffect(() => {
         fetchMatches();
         const interval = setInterval(fetchMatches, 3000); 
         return () => clearInterval(interval);
@@ -231,10 +284,12 @@ const Matches = () => {
 
         // Validar que se haya seleccionado un equipo con el número correcto de miembros
         const requiredMembers = parseInt(newMatch.type.charAt(0));
+        
+        // SIEMPRE se requiere equipo (incluso para 1v1)
         if (!newMatch.teamId) {
             toast({ 
                 title: "Error", 
-                description: `Debes seleccionar un equipo para partidas ${newMatch.type}`, 
+                description: `Debes seleccionar un equipo para crear la partida`, 
                 variant: "destructive" 
             });
             return;
@@ -288,22 +343,39 @@ const Matches = () => {
         }
         
         try {
+            console.log('Intentando crear match con datos:', newMatch);
+            console.log('Usuario actual:', user);
             const match = await db.createMatch(newMatch);
+            console.log('Match creado exitosamente:', match);
+            
+            // Cerrar modal
             setShowCreateModal(false);
             setModalStep(1);
+            
+            // IMPORTANTE: Refrescar lista de matches inmediatamente y forzar actualización
+            console.log('Refrescando lista de matches...');
+            await fetchMatches();
+            
+            // Dar un pequeño delay para asegurar que el estado se actualice
+            setTimeout(() => {
+                console.log('Estado de matches después de crear:', matches.length);
+            }, 100);
+            
             toast({ 
                 title: "✅ Match Creado", 
-                description: "Tu partida está lista. Espera a que alguien se una.", 
-                className: "bg-green-600 text-white border-none" 
+                description: "Redirigiendo a tu partida...", 
+                className: "bg-green-600 text-white border-none",
+                duration: 3000
             });
-            // Refrescar lista de matches inmediatamente
-            await fetchMatches();
+            
+            // Redirigir automáticamente al match creado
             navigate(`/match/${match.id}`);
         } catch (error) {
-            console.error('Error al crear match:', error);
+            console.error('Error detallado al crear match:', error);
+            console.error('Stack trace:', error.stack);
             toast({ 
                 title: "Error al crear partida", 
-                description: "Hubo un problema al crear la partida. Inténtalo de nuevo.", 
+                description: error.message || "Hubo un problema al crear la partida. Inténtalo de nuevo.", 
                 variant: "destructive" 
             });
         }
@@ -378,7 +450,7 @@ const Matches = () => {
                                         </div>
                                     </div>
 
-                                    {/* Team selector */}
+                                    {/* Team selector - para TODOS los tipos de partida */}
                                     <div className="space-y-2">
                                         <Label className="text-blue-200 font-semibold">
                                             Selecciona tu equipo {newMatch.type === '1v1' ? '(1 miembro)' : newMatch.type === '2v2' ? '(2 miembros)' : newMatch.type === '3v3' ? '(3 miembros)' : '(4 miembros)'}
@@ -398,7 +470,7 @@ const Matches = () => {
                                             <SelectContent className="bg-slate-950 border-blue-500/30">
                                                 {userTeams.filter(team => team.members.length === parseInt(newMatch.type.charAt(0))).length === 0 ? (
                                                     <SelectItem value="none" disabled className="text-blue-300/50">
-                                                        No tienes equipos de {newMatch.type} - Crea uno en la sección "Equipos"
+                                                        No tienes equipos de {parseInt(newMatch.type.charAt(0))} {parseInt(newMatch.type.charAt(0)) === 1 ? 'miembro' : 'miembros'} - Crea uno en "Equipos"
                                                     </SelectItem>
                                                 ) : (
                                                     userTeams
@@ -473,10 +545,11 @@ const Matches = () => {
                                     <Button 
                                         className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold shadow-[0_0_20px_rgba(59,130,246,0.5)]" 
                                         onClick={() => {
+                                            // Siempre validar equipo (incluso para 1v1)
                                             if (!newMatch.teamId) {
                                                 toast({ 
                                                     title: "Error", 
-                                                    description: "Debes seleccionar un equipo", 
+                                                    description: `Debes seleccionar un equipo para crear la partida`, 
                                                     variant: "destructive" 
                                                 });
                                                 return;
