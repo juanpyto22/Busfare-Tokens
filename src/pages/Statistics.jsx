@@ -78,9 +78,9 @@ const Statistics = () => {
             </Helmet>
 
             <div className="container mx-auto px-4 relative z-10">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-black text-white mb-2 text-glow">Tus Estadísticas</h1>
-                    <p className="text-blue-200/80">Análisis detallado de tu rendimiento</p>
+                <div className="mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-4xl font-black text-white mb-2 text-glow">Tus Estadísticas</h1>
+                    <p className="text-blue-200/80 text-sm sm:text-base">Análisis detallado de tu rendimiento</p>
                 </div>
 
                 {/* Stats Grid */}

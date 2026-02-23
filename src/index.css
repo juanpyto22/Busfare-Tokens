@@ -93,3 +93,45 @@ body {
 .animate-pulse-blue {
   animation: pulse-blue 2s infinite;
 }
+
+/* Hide scrollbar utility */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+  }
+
+  /* Prevent overscroll bounce */
+  html {
+    overscroll-behavior: none;
+  }
+
+  /* Better touch targets */
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent text resize on orientation change */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* Safe area support for notched devices */
+@supports(padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}

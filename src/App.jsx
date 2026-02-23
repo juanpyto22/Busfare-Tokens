@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import GlobalChat from '@/components/GlobalChat';
@@ -23,10 +23,21 @@ import ModeratorPanel from '@/pages/ModeratorPanel';
 import ForgotPassword from '@/pages/ForgotPassword';
 import { Toaster } from '@/components/ui/toaster';
 
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+    }, []);
+    return isMobile;
+};
+
 // Wrapper to conditionally render Navbar
 const AppContent = () => {
     const location = useLocation();
     const { isChatOpen } = useChat();
+    const isMobile = useIsMobile();
     const hideNavbar = ['/login', '/register'].includes(location.pathname);
 
     return (
@@ -35,7 +46,7 @@ const AppContent = () => {
             <div 
                 className="transition-all duration-300 ease-in-out"
                 style={{ 
-                    marginRight: isChatOpen ? '384px' : '0',
+                    marginRight: (isChatOpen && !isMobile) ? '384px' : '0',
                 }}
             >
                 <Routes>

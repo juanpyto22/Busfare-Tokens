@@ -134,12 +134,12 @@ const AdminPanel = () => {
             </Helmet>
 
             <div className="container mx-auto px-4 relative z-10">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-black text-white mb-2 text-glow flex items-center gap-3">
-                        <Shield className="h-10 w-10 text-red-400" />
+                <div className="mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-4xl font-black text-white mb-2 text-glow flex items-center gap-2 sm:gap-3">
+                        <Shield className="h-7 w-7 sm:h-10 sm:w-10 text-red-400 shrink-0" />
                         Panel de Administración
                     </h1>
-                    <p className="text-blue-200/80">Control total del sistema</p>
+                    <p className="text-blue-200/80 text-sm sm:text-base">Control total del sistema</p>
                 </div>
 
                 {/* Estadísticas Rápidas */}
@@ -251,16 +251,16 @@ const AdminPanel = () => {
                                 <Users className="h-5 w-5 text-blue-400" />
                                 Gestión de Usuarios
                             </span>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 w-full sm:w-auto">
                                 <Input
                                     placeholder="Buscar usuario..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-64 bg-blue-950/30 border-blue-500/30 text-white"
+                                    className="w-full sm:w-64 bg-blue-950/30 border-blue-500/30 text-white"
                                 />
                             </div>
                         </CardTitle>
-                        <div className="flex gap-2 mt-4">
+                        <div className="flex flex-wrap gap-2 mt-4">
                             <Button
                                 onClick={() => setFilter('all')}
                                 variant={filter === 'all' ? 'default' : 'outline'}

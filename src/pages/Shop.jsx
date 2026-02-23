@@ -330,7 +330,7 @@ const Shop = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] pt-10 pb-20 relative">
+        <div className="min-h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] pt-6 sm:pt-10 pb-20 relative">
             <div className="absolute top-20 left-1/4 w-96 h-96 bg-blue-600/5 rounded-full blur-3xl animate-pulse" />
             <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-cyan-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
             
@@ -339,9 +339,9 @@ const Shop = () => {
             </Helmet>
             
             <div className="container mx-auto px-4 relative z-10">
-                <div className="text-center mb-16">
-                    <h1 className="text-4xl font-black text-white mb-4 text-glow">TIENDA DE TOKENS</h1>
-                    <p className="text-blue-200/80">Elige el paquete que mejor se adapte a tu estilo de juego.</p>
+                <div className="text-center mb-8 sm:mb-16">
+                    <h1 className="text-2xl sm:text-4xl font-black text-white mb-3 sm:mb-4 text-glow">TIENDA DE TOKENS</h1>
+                    <p className="text-blue-200/80 text-sm sm:text-base">Elige el paquete que mejor se adapte a tu estilo de juego.</p>
                 </div>
 
                 {/* VIP Subscription Section */}
@@ -351,15 +351,15 @@ const Shop = () => {
                     className="mb-12"
                 >
                     <Card className="bg-gradient-to-br from-yellow-900/30 to-yellow-950/50 backdrop-blur-sm border-2 border-yellow-500/40 hover:border-yellow-400/60 hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-all duration-300">
-                        <div className="p-8 md:flex md:items-center md:justify-between">
+                        <div className="p-4 sm:p-8 md:flex md:items-center md:justify-between">
                             <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="h-14 w-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.5)]">
-                                        <Crown className="h-8 w-8 text-white" />
+                                    <div className="h-10 w-10 sm:h-14 sm:w-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.5)] shrink-0">
+                                        <Crown className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
                                     </div>
                                     <div>
-                                        <h2 className="text-3xl font-black text-white text-glow">VIP SUBSCRIPTION</h2>
-                                        <p className="text-yellow-200/70 text-sm">Suscripción mensual · {vipPackage.duration}</p>
+                                        <h2 className="text-xl sm:text-3xl font-black text-white text-glow">VIP SUBSCRIPTION</h2>
+                                        <p className="text-yellow-200/70 text-xs sm:text-sm">Suscripción mensual · {vipPackage.duration}</p>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
@@ -438,7 +438,7 @@ const Shop = () => {
                     <p className="text-blue-300/70 text-sm">Paquetes con bonus incluidos</p>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     {tokenPackages.map((pkg, idx) => (
                         <motion.div
                             key={pkg.id}

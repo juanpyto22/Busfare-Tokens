@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -246,8 +247,21 @@ const Matches = () => {
 
     useEffect(() => {
         fetchMatches();
-        const interval = setInterval(fetchMatches, 3000); 
-        return () => clearInterval(interval);
+        const interval = setInterval(fetchMatches, 5000); 
+
+        // Real-time subscription for instant match updates (cancel, new, etc.)
+        const channel = supabase
+            .channel('matches_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => {
+                // Re-fetch matches when any change happens
+                fetchMatches();
+            })
+            .subscribe();
+
+        return () => {
+            clearInterval(interval);
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     // Actualizar el tiempo cada segundo para el temporizador
@@ -382,7 +396,7 @@ const Matches = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] pt-8 pb-20 font-sans relative">
+        <div className="min-h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] pt-4 sm:pt-8 pb-20 font-sans relative">
             <div className="absolute top-20 left-1/4 w-96 h-96 bg-blue-600/5 rounded-full blur-3xl animate-pulse" />
             <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-cyan-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
             
@@ -392,8 +406,8 @@ const Matches = () => {
             <div className="container mx-auto px-4 relative z-10">
                 
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                    <h1 className="text-4xl font-black text-white tracking-tight text-glow">{t('matches.title')}</h1>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-3 sm:gap-4">
+                    <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight text-glow">{t('matches.title')}</h1>
                     <Dialog open={showCreateModal} onOpenChange={async (open) => {
                         setShowCreateModal(open);
                         if (open && user) {
@@ -625,7 +639,7 @@ const Matches = () => {
                 </div>
 
                 {/* Filters Bar */}
-                <div className="flex flex-col xl:flex-row gap-4 mb-8">
+                <div className="flex flex-col gap-3 sm:gap-4 mb-6 sm:mb-8">
                      <div className="flex bg-blue-950/30 backdrop-blur-sm p-1 rounded-lg border border-blue-500/20 w-fit">
                          <Button 
                             variant="ghost" 
@@ -649,7 +663,7 @@ const Matches = () => {
                          </Button>
                      </div>
                      
-                     <div className="flex flex-wrap gap-2 xl:ml-auto items-center">
+                     <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible items-center">
                         {/* Region Filter */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -768,7 +782,7 @@ const Matches = () => {
                 </div>
 
                 {/* Matches Grid */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                     {getFilteredMatches().map((match, idx) => (
                         <motion.div
                             key={match.id}

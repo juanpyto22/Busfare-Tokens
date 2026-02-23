@@ -47,7 +47,7 @@ const Transactions = () => {
     const filteredTransactions = getFilteredTransactions();
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] pt-10 pb-20 relative">
+        <div className="min-h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] pt-6 sm:pt-10 pb-20 relative">
             <div className="absolute top-20 left-1/4 w-96 h-96 bg-blue-600/5 rounded-full blur-3xl animate-pulse" />
             <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-cyan-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
             
@@ -56,9 +56,9 @@ const Transactions = () => {
             </Helmet>
 
             <div className="container mx-auto px-4 relative z-10">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-black text-white mb-2 text-glow">Historial de Transacciones</h1>
-                    <p className="text-blue-200/80">Revisa todos tus movimientos de tokens</p>
+                <div className="mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-4xl font-black text-white mb-2 text-glow">Historial de Transacciones</h1>
+                    <p className="text-blue-200/80 text-sm sm:text-base">Revisa todos tus movimientos de tokens</p>
                 </div>
 
                 {/* Filtros */}

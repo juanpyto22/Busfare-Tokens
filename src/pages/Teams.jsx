@@ -123,16 +123,16 @@ const Teams = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] pt-10 pb-20 relative overflow-hidden">
+        <div className="min-h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] pt-6 sm:pt-10 pb-20 relative overflow-hidden">
             
             <Helmet>
                 <title>Mis Equipos | BusFare-tokens</title>
             </Helmet>
             <div className="container mx-auto px-4 relative z-10">
-                <div className="flex justify-between items-center mb-10">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 sm:mb-10">
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-2 text-glow">My Teams</h1>
-                        <p className="text-blue-200/80">Gestiona tus squads, invita amigos y compite.</p>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2 text-glow">My Teams</h1>
+                        <p className="text-blue-200/80 text-sm sm:text-base">Gestiona tus squads, invita amigos y compite.</p>
                     </div>
                     {user && (
                     <div className="flex gap-2">
@@ -295,7 +295,7 @@ const Teams = () => {
                                                         <div key={i} className="flex items-center justify-between p-2 rounded bg-blue-950/30 border border-blue-500/20">
                                                             <div className="flex items-center gap-2">
                                                                 <img 
-                                                                    src={member.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`} 
+                                                                    src={member.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${member.name}`} 
                                                                     alt="Avatar" 
                                                                     className="h-6 w-6 rounded-full"
                                                                 />
@@ -338,7 +338,7 @@ const Teams = () => {
                                         <div key={i} className="flex items-center justify-between p-2 rounded bg-blue-950/30 hover:bg-blue-900/30 transition-colors border border-blue-500/10">
                                             <div className="flex items-center gap-3">
                                                  <img 
-                                                    src={member.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`} 
+                                                    src={member.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${member.name}`} 
                                                     alt="Avatar" 
                                                     className="h-8 w-8 rounded-full bg-slate-900 border border-blue-500/30"
                                                 />

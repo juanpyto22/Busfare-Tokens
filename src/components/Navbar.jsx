@@ -3,6 +3,30 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/db';
 import { useToast } from '@/components/ui/use-toast';
+import { generateAvatarUrl, sanitizeAvatarConfig } from '@/components/AvatarEditor';
+import {
+  SKIN_COLORS,
+  HAIR_STYLES,
+  HAIR_COLORS,
+  FACIAL_HAIR_STYLES,
+  EYES_STYLES,
+  EYEBROW_STYLES,
+  MOUTH_STYLES,
+  ACCESSORIES,
+  CLOTHING_STYLES,
+  CLOTHING_COLORS,
+  HAT_STYLES,
+  HAT_COLORS,
+  CLOTHING_GRAPHIC,
+  FACIAL_HAIR_COLORS,
+  ACCESSORIES_COLORS,
+  skinColorMap,
+  hairColorMap,
+  clothingColorMap,
+  hatColorMap,
+  accessoriesColorMap,
+  facialHairColorMap
+} from '@/lib/avatar-constants';
 import { useChat } from '@/contexts/ChatContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import logo from '../../img/logo.png';
@@ -15,7 +39,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Coins, User, LogOut, Shield, Swords, Users, Trophy, Wallet, Settings, Bell, Check, X, Languages, AlertCircle, Scale } from 'lucide-react';
+import { Coins, User, LogOut, Shield, Swords, Users, Trophy, Wallet, Settings, Bell, Check, X, Languages, AlertCircle, Scale, Menu } from 'lucide-react';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -25,6 +49,8 @@ const Navbar = () => {
   const [user, setUser] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [avatarConfig, setAvatarConfig] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -36,6 +62,20 @@ const Navbar = () => {
     const interval = setInterval(checkAuth, 1000); 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const loadAvatar = async () => {
+      if (user) {
+        const config = await db.getAvatarConfig(user.id);
+        setAvatarConfig(config);
+      }
+    };
+    loadAvatar();
+    // Escuchar cambios globales de avatar
+    const handler = () => loadAvatar();
+    window.addEventListener('avatarConfigChanged', handler);
+    return () => window.removeEventListener('avatarConfigChanged', handler);
+  }, [user?.id]);
 
   useEffect(() => {
     // Load notifications from Supabase
@@ -151,15 +191,25 @@ const Navbar = () => {
     <nav 
       className="border-b border-blue-500/20 bg-gradient-to-r from-[#050911] via-[#0a1628] to-[#050911] backdrop-blur-xl sticky top-0 z-50 shadow-lg shadow-blue-900/20 transition-all duration-300 ease-in-out"
       style={{ 
-        marginRight: isChatOpen ? '384px' : '0',
+        marginRight: isChatOpen && window.innerWidth >= 640 ? '384px' : '0',
       }}
     >
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
         
+        {/* Mobile Hamburger */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden text-blue-200 hover:text-white hover:bg-blue-600/30 h-9 w-9 shrink-0"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
+        <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group" onClick={() => setMobileMenuOpen(false)}>
                                  <div className="transform group-hover:scale-110 transition-transform duration-300">
-                                     <img src={logo} alt="BusFare" className="h-16 w-16 object-contain" />
+                                     <img src={logo} alt="BusFare" className="h-10 w-10 sm:h-16 sm:w-16 object-contain" />
                                  </div>
            <span className="text-lg font-black tracking-tighter text-white italic uppercase hidden md:block">
              BusFare<span className="text-blue-400">-tokens</span>
@@ -321,7 +371,7 @@ const Navbar = () => {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-9 w-9 rounded-full overflow-hidden border border-blue-500/30 p-0 hover:border-blue-400/60 transition-all hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]">
                                     <img 
-                                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} 
+                                        src={generateAvatarUrl(avatarConfig ? { ...sanitizeAvatarConfig(avatarConfig), seed: user.username } : { seed: user.username })} 
                                         alt="Avatar" 
                                         className="h-full w-full object-cover bg-slate-900"
                                     />
@@ -330,7 +380,7 @@ const Navbar = () => {
                             <DropdownMenuContent className="w-64 bg-slate-950 border-blue-500/30 text-blue-100 p-2 shadow-xl shadow-blue-900/30 mt-2" align="end">
                                 <div className="flex items-center gap-3 p-2 mb-2">
                                      <div className="h-10 w-10 rounded-full overflow-hidden bg-slate-900 shrink-0 border border-blue-500/30">
-                                         <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} className="h-full w-full object-cover"/>
+                                         <img src={generateAvatarUrl(avatarConfig ? { ...sanitizeAvatarConfig(avatarConfig), seed: user.username } : { seed: user.username })} className="h-full w-full object-cover"/>
                                      </div>
                                      <div className="overflow-hidden">
                                          <p className="text-sm font-bold text-white truncate">{user.username}</p>
@@ -418,6 +468,73 @@ const Navbar = () => {
             )}
         </div>
       </div>
+
+      {/* Mobile Dropdown Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-blue-500/20 bg-gradient-to-b from-[#0a1628] to-[#050911] backdrop-blur-xl animate-in slide-in-from-top-2 duration-200">
+          <div className="container mx-auto px-4 py-3 space-y-1">
+            {user && (
+              <div className="flex items-center gap-3 px-3 py-2.5 mb-2 bg-blue-950/40 rounded-lg border border-blue-500/20">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="text-sm font-bold text-white">{user.tokens?.toFixed(2)}</span>
+                  <Coins className="h-3 w-3 text-cyan-400" />
+                </div>
+                <div className="w-px h-4 bg-blue-500/30" />
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold text-white">{user.snipes || 0}</span>
+                  <span className="text-[10px] text-blue-400">snipes</span>
+                </div>
+              </div>
+            )}
+            {[
+              { path: '/matches', label: t('nav.matches'), icon: Swords },
+              { path: '/teams', label: t('nav.teams'), icon: Users },
+              { path: '/leaderboard', label: t('nav.leaderboard'), icon: Trophy },
+              { path: '/shop', label: t('nav.shop'), icon: Coins },
+            ].map(item => (
+              <Link 
+                key={item.path} 
+                to={item.path} 
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-blue-200 hover:text-white hover:bg-blue-600/20 transition-colors font-medium text-sm"
+              >
+                <item.icon className="h-4 w-4 text-cyan-400" />
+                {item.label}
+              </Link>
+            ))}
+            {user && (
+              <>
+                <div className="h-px bg-blue-500/20 my-1" />
+                <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-blue-200 hover:text-white hover:bg-blue-600/20 transition-colors font-medium text-sm">
+                  <User className="h-4 w-4 text-cyan-400" />
+                  {t('nav.profile')}
+                </Link>
+                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-blue-200 hover:text-white hover:bg-blue-600/20 transition-colors font-medium text-sm">
+                  <Wallet className="h-4 w-4 text-cyan-400" />
+                  {t('nav.wallet')}
+                </Link>
+                <Link to="/settings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-blue-200 hover:text-white hover:bg-blue-600/20 transition-colors font-medium text-sm">
+                  <Settings className="h-4 w-4 text-cyan-400" />
+                  {t('nav.settings')}
+                </Link>
+                {user.role === 'admin' && (
+                  <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-950/20 transition-colors font-medium text-sm">
+                    <Shield className="h-4 w-4" />
+                    Panel Admin
+                  </Link>
+                )}
+                {(user.role === 'moderator' || user.role === 'admin') && (
+                  <Link to="/moderator" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-purple-400 hover:text-purple-300 hover:bg-purple-950/20 transition-colors font-medium text-sm">
+                    <Scale className="h-4 w-4" />
+                    Panel Moderador
+                  </Link>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

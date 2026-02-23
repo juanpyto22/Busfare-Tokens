@@ -155,8 +155,12 @@ const MatchDetail = () => {
         setShowLeaveDialog(true);
     };
 
-    const confirmLeaveMatch = () => {
-        db.leaveMatch(id, user.id);
+    const confirmLeaveMatch = async () => {
+        try {
+            await db.leaveMatch(id, user.id);
+        } catch (e) {
+            console.error('Error leaving match:', e);
+        }
         setShowLeaveDialog(false);
         navigate('/matches');
         toast({ 
@@ -252,7 +256,7 @@ const MatchDetail = () => {
     const isParticipant = match.players.some(p => p.id === user?.id);
 
     return (
-        <div className="h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] flex flex-col relative pt-32 overflow-hidden">
+        <div className="h-screen bg-gradient-to-br from-[#050911] via-[#0a1628] to-[#050911] flex flex-col relative pt-20 md:pt-32 overflow-hidden">
             <div className="absolute top-20 left-1/4 w-96 h-96 bg-blue-600/5 rounded-full blur-3xl animate-pulse" />
             <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-cyan-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
             
@@ -261,12 +265,12 @@ const MatchDetail = () => {
             </Helmet>
             
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-950/60 via-slate-900/60 to-blue-950/60 backdrop-blur-sm border-b border-blue-500/20 p-6 relative z-10 mt-8">
+            <div className="bg-gradient-to-r from-blue-950/60 via-slate-900/60 to-blue-950/60 backdrop-blur-sm border-b border-blue-500/20 p-3 sm:p-6 relative z-10 mt-4 sm:mt-8">
                 <div className="container mx-auto px-4">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                         <div className="flex-1">
                             <div className="text-blue-300/70 text-sm mb-1 uppercase tracking-widest font-bold">Match #{match.id}</div>
-                            <h1 className="text-3xl md:text-4xl font-black text-white uppercase italic text-glow whitespace-nowrap">{match.type} {match.mode}</h1>
+                            <h1 className="text-xl sm:text-3xl md:text-4xl font-black text-white uppercase italic text-glow">{match.type} {match.mode}</h1>
                         </div>
                         <div className="flex gap-4 mt-4 md:mt-0">
                              <div className="flex items-center gap-2 bg-blue-950/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-blue-500/30">
@@ -297,7 +301,7 @@ const MatchDetail = () => {
                 </div>
             </div>
 
-            <div className="flex-1 container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
+            <div className="flex-1 container mx-auto px-4 py-4 sm:py-8 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8 relative z-10">
                 {/* Left Column: Teams & Info */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Teams Display */}

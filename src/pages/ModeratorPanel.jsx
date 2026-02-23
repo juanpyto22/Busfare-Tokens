@@ -102,12 +102,12 @@ const ModeratorPanel = () => {
             </Helmet>
 
             <div className="container mx-auto px-4 relative z-10">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-black text-white mb-2 text-glow flex items-center gap-3">
-                        <Scale className="h-10 w-10 text-purple-400" />
+                <div className="mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-4xl font-black text-white mb-2 text-glow flex items-center gap-2 sm:gap-3">
+                        <Scale className="h-7 w-7 sm:h-10 sm:w-10 text-purple-400 shrink-0" />
                         Panel de Moderación
                     </h1>
-                    <p className="text-blue-200/80">Resolución de disputas y reportes</p>
+                    <p className="text-blue-200/80 text-sm sm:text-base">Resolución de disputas y reportes</p>
                 </div>
 
                 {/* Estadísticas */}

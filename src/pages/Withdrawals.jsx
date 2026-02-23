@@ -124,12 +124,12 @@ const Withdrawals = () => {
             </Helmet>
 
             <div className="container mx-auto px-4 relative z-10">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-black text-white mb-2 text-glow">Retiros de Tokens</h1>
-                    <p className="text-blue-200/80">Convierte tus tokens en dinero real</p>
+                <div className="mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-4xl font-black text-white mb-2 text-glow">Retiros de Tokens</h1>
+                    <p className="text-blue-200/80 text-sm sm:text-base">Convierte tus tokens en dinero real</p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
                     {/* Formulario de Retiro */}
                     <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20">
                         <CardHeader>

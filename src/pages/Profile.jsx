@@ -8,6 +8,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from '@/components/ui/use-toast';
 import { User, BarChart3, Users, History, CreditCard, Crown, Settings as SettingsIcon, RefreshCw, TrendingUp } from 'lucide-react';
 import { Helmet } from 'react-helmet';
+import AvatarEditor, { generateAvatarUrl, sanitizeAvatarConfig } from '@/components/AvatarEditor';
+import {
+    SKIN_COLORS,
+    HAIR_STYLES,
+    HAIR_COLORS,
+    FACIAL_HAIR_STYLES,
+    EYES_STYLES,
+    EYEBROW_STYLES,
+    MOUTH_STYLES,
+    ACCESSORIES,
+    CLOTHING_STYLES,
+    CLOTHING_COLORS,
+    HAT_STYLES,
+    HAT_COLORS,
+    CLOTHING_GRAPHIC,
+    FACIAL_HAIR_COLORS,
+    ACCESSORIES_COLORS,
+    skinColorMap,
+    hairColorMap,
+    clothingColorMap,
+    hatColorMap,
+    accessoriesColorMap,
+    facialHairColorMap
+} from '@/lib/avatar-constants';
 
 const Profile = () => {
     const navigate = useNavigate();
@@ -26,6 +50,8 @@ const Profile = () => {
     const [tiktokHandle, setTiktokHandle] = useState('');
     const [teams, setTeams] = useState([]);
     const [matchHistory, setMatchHistory] = useState([]);
+    const [avatarConfig, setAvatarConfig] = useState(null);
+    const [avatarEditorOpen, setAvatarEditorOpen] = useState(false);
     
     // Rankings state
     const [rankings, setRankings] = useState({
@@ -44,14 +70,16 @@ const Profile = () => {
 
     useEffect(() => {
         const session = db.getSession();
+        console.log('[Profile] session:', session);
         if (!session) {
+            console.warn('[Profile] No session found, redirecting to /login');
             navigate('/login');
             return;
         }
         setUser(session);
         setUsername(session.username);
         setEmail(session.email);
-        
+
         // Load social accounts
         loadSocialAccounts();
 
@@ -63,6 +91,13 @@ const Profile = () => {
 
         // Load rankings
         loadRankings();
+
+        // Load avatar config
+        const loadAvatarConfig = async () => {
+            const config = await db.getAvatarConfig(session.id);
+            setAvatarConfig(config);
+        };
+        loadAvatarConfig();
     }, [navigate]);
 
     const loadSocialAccounts = async () => {
@@ -274,23 +309,24 @@ const Profile = () => {
                 <title>{user.username} | Profile</title>
             </Helmet>
             
-            <div className="border-b border-blue-500/20 bg-gradient-to-r from-blue-950/60 via-slate-900/60 to-blue-950/60 backdrop-blur-sm py-8 px-8 relative z-10">
+            <div className="border-b border-blue-500/20 bg-gradient-to-r from-blue-950/60 via-slate-900/60 to-blue-950/60 backdrop-blur-sm py-4 sm:py-8 px-4 sm:px-8 relative z-10">
                 <div className="container mx-auto max-w-7xl">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-center gap-3 sm:gap-6">
                             <img 
-                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} 
+                                src={generateAvatarUrl(avatarConfig ? { ...sanitizeAvatarConfig(avatarConfig), seed: user.username } : { seed: user.username })} 
                                 alt="Avatar" 
-                                className="h-24 w-24 rounded-full border-4 border-cyan-500 bg-blue-950/50 shadow-[0_0_20px_rgba(34,211,238,0.5)]"
+                                className="h-16 w-16 sm:h-24 sm:w-24 rounded-full border-4 border-cyan-500 bg-blue-950/50 shadow-[0_0_20px_rgba(34,211,238,0.5)] cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+                                onClick={() => setAvatarEditorOpen(true)}
                             />
-                            <div>
-                                <div className="flex items-center gap-3 mb-1">
-                                    <h1 className="text-3xl font-bold text-white text-glow">{user.username}</h1>
-                                    <span className="bg-gradient-to-r from-yellow-600 to-yellow-500 text-yellow-50 text-[10px] font-bold px-2 py-0.5 rounded border border-yellow-400/40 uppercase tracking-wider shadow-[0_0_10px_rgba(234,179,8,0.3)]">VIP</span>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2 sm:gap-3 mb-1">
+                                    <h1 className="text-xl sm:text-3xl font-bold text-white text-glow truncate">{user.username}</h1>
+                                    <span className="bg-gradient-to-r from-yellow-600 to-yellow-500 text-yellow-50 text-[10px] font-bold px-2 py-0.5 rounded border border-yellow-400/40 uppercase tracking-wider shadow-[0_0_10px_rgba(234,179,8,0.3)] shrink-0">VIP</span>
                                 </div>
-                                <div className="flex items-center gap-3 mb-3">
-                                    <span className="bg-blue-950/50 backdrop-blur-sm text-cyan-300 text-xs font-bold px-3 py-1 rounded-full border border-cyan-500/30 flex items-center gap-1.5 shadow-[0_0_10px_rgba(34,211,238,0.2)]">
-                                        🏆 Rank #{(Math.floor(Math.random() * 5000) + 1)}
+                                <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 flex-wrap">
+                                    <span className="bg-blue-950/50 backdrop-blur-sm text-cyan-300 text-xs font-bold px-2 sm:px-3 py-1 rounded-full border border-cyan-500/30 flex items-center gap-1.5 shadow-[0_0_10px_rgba(34,211,238,0.2)]">
+                                        🏆 Rank #{rankings.overall || '...'}
                                     </span>
                                     <span className={`text-xs font-bold px-2 py-1 rounded ${user.earnings >= 0 ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'}`}>
                                         {user.earnings >= 0 ? '+' : ''}{user.earnings.toFixed(2)}
@@ -302,13 +338,13 @@ const Profile = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-3">
-                            <Button variant="outline" className="bg-transparent border-blue-500/30 text-blue-300 hover:text-white hover:border-cyan-400/60 hover:bg-blue-950/30 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
-                                <BarChart3 className="h-4 w-4 mr-2" /> Compare
+                        <div className="flex gap-2 sm:gap-3">
+                            <Button variant="outline" className="bg-transparent border-blue-500/30 text-blue-300 hover:text-white hover:border-cyan-400/60 hover:bg-blue-950/30 shadow-[0_0_10px_rgba(59,130,246,0.2)] text-xs sm:text-sm h-9 sm:h-10">
+                                <BarChart3 className="h-4 w-4 mr-1 sm:mr-2" /> Compare
                             </Button>
                             <Button 
                                 onClick={() => setTipModalOpen(true)}
-                                className="bg-gradient-to-r from-yellow-600 to-yellow-500 text-yellow-50 border border-yellow-400/40 hover:from-yellow-500 hover:to-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+                                className="bg-gradient-to-r from-yellow-600 to-yellow-500 text-yellow-50 border border-yellow-400/40 hover:from-yellow-500 hover:to-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.4)] text-xs sm:text-sm h-9 sm:h-10"
                             >
                                 💰 Tip
                             </Button>
@@ -317,9 +353,40 @@ const Profile = () => {
                 </div>
             </div>
 
-            <div className="container mx-auto max-w-7xl px-8 py-8 relative z-10">
+            <div className="container mx-auto max-w-7xl px-4 sm:px-8 py-4 sm:py-8 relative z-10">
+                {/* Mobile horizontal tabs */}
+                <div className="lg:hidden mb-4 -mx-4 px-4 overflow-x-auto scrollbar-none">
+                    <div className="flex gap-1.5 min-w-max bg-blue-950/30 backdrop-blur-sm p-1.5 rounded-xl border border-blue-500/20">
+                        {sidebarItems.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = activeSidebar === item.id;
+                            return (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        setActiveSidebar(item.id);
+                                        if (item.id === 'profile') setActiveTab('overview');
+                                        if (item.id === 'teams') setActiveTab('teams');
+                                        if (item.id === 'history') setActiveTab('history');
+                                        if (item.id === 'transactions') setActiveTab('transactions');
+                                        if (item.id === 'vip') setActiveTab('vip');
+                                        if (item.id === 'settings') setActiveTab('settings');
+                                    }}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 ${
+                                        isActive ? 'bg-gradient-to-r from-cyan-500/20 to-blue-600/20 text-white border border-cyan-500/40 shadow-[0_0_10px_rgba(34,211,238,0.3)]' : 'text-blue-300/70 hover:text-white border border-transparent'
+                                    }`}
+                                >
+                                    <Icon className="h-3.5 w-3.5" />
+                                    {item.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 <div className="flex gap-8">
-                    <div className="w-80 shrink-0">
+                    {/* Desktop sidebar */}
+                    <div className="hidden lg:block w-80 shrink-0">
                         <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20 p-3 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300">
                             <div className="space-y-1">
                                 {sidebarItems.map((item) => {
@@ -350,13 +417,13 @@ const Profile = () => {
                         </Card>
                     </div>
 
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                         {/* Solo mostrar tabs horizontales cuando activeSidebar es 'profile' */}
                         {activeSidebar === 'profile' && (
-                            <div className="flex gap-8 border-b border-blue-500/20 mb-8">
+                            <div className="flex gap-4 sm:gap-8 border-b border-blue-500/20 mb-4 sm:mb-8 overflow-x-auto scrollbar-none">
                                 <button
                                     onClick={() => setActiveTab('overview')}
-                                    className={`pb-4 px-2 font-medium transition-colors relative ${
+                                    className={`pb-3 sm:pb-4 px-1 sm:px-2 font-medium transition-colors relative whitespace-nowrap text-sm sm:text-base ${
                                         activeTab === 'overview' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
                                     }`}
                                 >
@@ -365,7 +432,7 @@ const Profile = () => {
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('financial')}
-                                    className={`pb-4 px-2 font-medium transition-colors relative ${
+                                    className={`pb-3 sm:pb-4 px-1 sm:px-2 font-medium transition-colors relative whitespace-nowrap text-sm sm:text-base ${
                                         activeTab === 'financial' ? 'text-white' : 'text-blue-300/60 hover:text-blue-200'
                                     }`}
                                 >
@@ -439,8 +506,8 @@ const Profile = () => {
                                 </div>
 
                                 {/* Statistics Cards */}
-                                <div className="grid md:grid-cols-3 gap-6 mb-10">
-                                    <Card className="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 backdrop-blur-sm border-cyan-500/30 p-8 hover:shadow-[0_0_30px_rgba(34,211,238,0.3)] transition-all duration-300">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-10">
+                                    <Card className="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 backdrop-blur-sm border-cyan-500/30 p-4 sm:p-8 hover:shadow-[0_0_30px_rgba(34,211,238,0.3)] transition-all duration-300">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="flex items-center gap-2">
                                                 <div className="h-12 w-12 bg-cyan-500/20 rounded-lg flex items-center justify-center border border-cyan-500/40">
@@ -449,7 +516,7 @@ const Profile = () => {
                                                 <h3 className="text-white font-bold text-lg">Win Rate</h3>
                                             </div>
                                         </div>
-                                        <div className="text-5xl font-black text-white mb-3">
+                                        <div className="text-3xl sm:text-5xl font-black text-white mb-3">
                                             {winRate}%
                                         </div>
                                         <div className="text-sm text-cyan-300/70">Percentage of victories</div>
@@ -461,7 +528,7 @@ const Profile = () => {
                                         </div>
                                     </Card>
 
-                                    <Card className="bg-gradient-to-br from-yellow-900/30 to-yellow-950/40 backdrop-blur-sm border-yellow-500/30 p-8 hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-all duration-300">
+                                    <Card className="bg-gradient-to-br from-yellow-900/30 to-yellow-950/40 backdrop-blur-sm border-yellow-500/30 p-4 sm:p-8 hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-all duration-300">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="flex items-center gap-2">
                                                 <div className="h-12 w-12 bg-yellow-500/20 rounded-lg flex items-center justify-center border border-yellow-500/40">
@@ -470,7 +537,7 @@ const Profile = () => {
                                                 <h3 className="text-white font-bold text-lg">Best Streak</h3>
                                             </div>
                                         </div>
-                                        <div className="text-5xl font-black text-white mb-3">
+                                        <div className="text-3xl sm:text-5xl font-black text-white mb-3">
                                             {user.streaks?.best || 0}
                                         </div>
                                         <div className="text-sm text-yellow-300/70">consecutive wins</div>
@@ -480,7 +547,7 @@ const Profile = () => {
                                         </div>
                                     </Card>
 
-                                    <Card className="bg-gradient-to-br from-purple-900/30 to-purple-950/40 backdrop-blur-sm border-purple-500/30 p-8 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] transition-all duration-300">
+                                    <Card className="bg-gradient-to-br from-purple-900/30 to-purple-950/40 backdrop-blur-sm border-purple-500/30 p-4 sm:p-8 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)] transition-all duration-300">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="flex items-center gap-2">
                                                 <div className="h-12 w-12 bg-purple-500/20 rounded-lg flex items-center justify-center border border-purple-500/40">
@@ -489,7 +556,7 @@ const Profile = () => {
                                                 <h3 className="text-white font-bold text-lg">Total Games</h3>
                                             </div>
                                         </div>
-                                        <div className="text-5xl font-black text-white mb-3">
+                                        <div className="text-3xl sm:text-5xl font-black text-white mb-3">
                                             {totalMatches}
                                         </div>
                                         <div className="text-sm text-purple-300/70">matches completed</div>
@@ -507,36 +574,36 @@ const Profile = () => {
                                 </div>
 
                                 {/* Tokens Earned Card */}
-                                <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20 p-8 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300 mb-10">
-                                    <div className="flex items-center gap-2 mb-6">
-                                        <CreditCard className="h-6 w-6 text-cyan-400" />
-                                        <h3 className="text-2xl font-bold text-white text-glow">Tokens Earned</h3>
+                                <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20 p-4 sm:p-8 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300 mb-10">
+                                    <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                                        <CreditCard className="h-5 sm:h-6 w-5 sm:w-6 text-cyan-400" />
+                                        <h3 className="text-lg sm:text-2xl font-bold text-white text-glow">Tokens Earned</h3>
                                     </div>
-                                    <div className="grid md:grid-cols-4 gap-8">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
                                         <div>
                                             <div className="text-sm font-semibold text-blue-300/70 mb-3">Net Profit</div>
-                                            <div className={`text-4xl font-black mb-2 ${user.earnings >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                                            <div className={`text-2xl sm:text-4xl font-black mb-2 ${user.earnings >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
                                                 {user.earnings >= 0 ? '+' : ''}{user.earnings.toFixed(2)}
                                             </div>
                                             <div className="text-xs text-blue-300/60">Total balance change</div>
                                         </div>
                                         <div>
-                                            <div className="text-sm font-semibold text-blue-300/70 mb-3">Total Won</div>
-                                            <div className="text-4xl font-black text-cyan-400 mb-2">
+                                            <div className="text-sm font-semibold text-blue-300/70 mb-2 sm:mb-3">Total Won</div>
+                                            <div className="text-2xl sm:text-4xl font-black text-cyan-400 mb-2">
                                                 +{(user.totalEarned || 0).toFixed(2)}
                                             </div>
                                             <div className="text-xs text-blue-300/60">Tokens from victories</div>
                                         </div>
                                         <div>
-                                            <div className="text-sm font-semibold text-blue-300/70 mb-3">Total Wagered</div>
-                                            <div className="text-4xl font-black text-white mb-2">
+                                            <div className="text-sm font-semibold text-blue-300/70 mb-2 sm:mb-3">Total Wagered</div>
+                                            <div className="text-2xl sm:text-4xl font-black text-white mb-2">
                                                 {(user.totalPlayed || 0).toFixed(2)}
                                             </div>
                                             <div className="text-xs text-blue-300/60">Tokens bet in total</div>
                                         </div>
                                         <div>
-                                            <div className="text-sm font-semibold text-blue-300/70 mb-3">Avg Per Game</div>
-                                            <div className={`text-4xl font-black mb-2 ${avgProfit >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                                            <div className="text-sm font-semibold text-blue-300/70 mb-2 sm:mb-3">Avg Per Game</div>
+                                            <div className={`text-2xl sm:text-4xl font-black mb-2 ${avgProfit >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
                                                 {avgProfit >= 0 ? '+' : ''}{avgProfit}
                                             </div>
                                             <div className="text-xs text-blue-300/60">Average earnings/match</div>
@@ -545,32 +612,32 @@ const Profile = () => {
                                 </Card>
 
                                 {/* Financial Performance */}
-                                <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20 p-8 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300">
-                                    <div className="flex items-center gap-2 mb-6">
+                                <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20 p-4 sm:p-8 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300">
+                                    <div className="flex items-center gap-2 mb-4 sm:mb-6">
                                         <CreditCard className="h-5 w-5 text-cyan-400" />
-                                        <h3 className="text-xl font-bold text-white text-glow">Financial Performance</h3>
+                                        <h3 className="text-lg sm:text-xl font-bold text-white text-glow">Financial Performance</h3>
                                     </div>
-                                    <div className="grid md:grid-cols-4 gap-6">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
                                         <div>
                                             <div className="text-sm font-semibold text-blue-300/70 mb-2">Net Profit/Loss</div>
-                                            <div className={`text-3xl font-black mb-1 ${user.earnings >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                                            <div className={`text-xl sm:text-3xl font-black mb-1 ${user.earnings >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
                                                 {user.earnings >= 0 ? '+' : ''}{user.earnings.toFixed(2)}
                                             </div>
                                             <div className="text-xs text-blue-300/60">Total earnings</div>
                                         </div>
                                         <div>
                                             <div className="text-sm font-semibold text-blue-300/70 mb-2">Total Wagered</div>
-                                            <div className="text-3xl font-black text-white mb-1">{(user.totalPlayed || 0).toFixed(2)}</div>
+                                            <div className="text-xl sm:text-3xl font-black text-white mb-1">{(user.totalPlayed || 0).toFixed(2)}</div>
                                             <div className="text-xs text-blue-300/60">In bets placed</div>
                                         </div>
                                         <div>
                                             <div className="text-sm font-semibold text-blue-300/70 mb-2">Total Won</div>
-                                            <div className="text-3xl font-black text-cyan-400 mb-1">+{(user.totalEarned || 0).toFixed(2)}</div>
+                                            <div className="text-xl sm:text-3xl font-black text-cyan-400 mb-1">+{(user.totalEarned || 0).toFixed(2)}</div>
                                             <div className="text-xs text-blue-300/60">From victories</div>
                                         </div>
                                         <div>
                                             <div className="text-sm font-semibold text-blue-300/70 mb-2">Avg Per Match</div>
-                                            <div className={`text-3xl font-black mb-1 ${user.earnings >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                                            <div className={`text-xl sm:text-3xl font-black mb-1 ${user.earnings >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
                                                 {user.wins + user.losses > 0 ? ((user.earnings >= 0 ? '+' : '') + (user.earnings / (user.wins + user.losses)).toFixed(2)) : '0.00'}
                                             </div>
                                             <div className="text-xs text-blue-300/60">Profit/loss per game</div>
@@ -578,8 +645,7 @@ const Profile = () => {
                                     </div>
                                 </Card>
 
-                                {/* Match Type Breakdown */}
-                                <div className="grid md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                     <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20 p-6 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300">
                                         <h4 className="text-white font-bold mb-6 flex items-center gap-2">
                                             <BarChart3 className="h-4 w-4 text-cyan-400" />
@@ -657,17 +723,17 @@ const Profile = () => {
                                 </div>
 
                                 {/* Leaderboard Ranking */}
-                                <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20 p-8 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300">
-                                    <div className="flex items-center justify-between mb-6">
+                                <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20 p-4 sm:p-8 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300">
+                                    <div className="flex items-center justify-between mb-4 sm:mb-6">
                                         <div className="flex items-center gap-2">
                                             <span className="text-2xl">🏅</span>
-                                            <h3 className="text-xl font-bold text-white text-glow">Competitive Ranking</h3>
+                                            <h3 className="text-lg sm:text-xl font-bold text-white text-glow">Competitive Ranking</h3>
                                         </div>
-                                        <div className="bg-cyan-500/20 border border-cyan-500/40 rounded-lg px-4 py-2">
-                                            <span className="text-cyan-300 font-bold text-lg">Rank #{rankings.overall || 1}</span>
+                                        <div className="bg-cyan-500/20 border border-cyan-500/40 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2">
+                                            <span className="text-cyan-300 font-bold text-sm sm:text-lg">Rank #{rankings.overall || 1}</span>
                                         </div>
                                     </div>
-                                    <div className="grid md:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                                         <div className="text-center p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg">
                                             <div className="text-sm text-blue-300/70 mb-2">Earnings Rank</div>
                                             <div className="text-2xl font-black text-cyan-400">#{rankings.earnings || 1}</div>
@@ -762,7 +828,7 @@ const Profile = () => {
                                                             <div key={idx} className="flex items-center justify-between p-3 rounded bg-blue-950/30 hover:bg-blue-950/50 border border-blue-500/20 transition-all duration-300">
                                                                 <div className="flex items-center gap-3">
                                                                     <img 
-                                                                        src={member.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`} 
+                                                                        src={member.avatar || `https://api.dicebear.com/9.x/avataaars/svg?seed=${member.name}`} 
                                                                         alt="Avatar" 
                                                                         className="h-8 w-8 rounded-full bg-blue-900/50 border border-cyan-500/30"
                                                                     />
@@ -1036,204 +1102,6 @@ const Profile = () => {
                                         </Button>
                                     </div>
                                 </Card>
-
-                                {/* Connected Accounts */}
-                                <Card className="bg-gradient-to-br from-blue-950/40 to-slate-900/40 backdrop-blur-sm border-blue-500/20 p-6 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300">
-                                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2 text-glow">
-                                        <Users className="h-5 w-5 text-cyan-400" /> Cuentas Conectadas
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {/* Epic Games */}
-                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl">🎮</span>
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">Epic Games</p>
-                                                    {epicGamesName ? (
-                                                        <p className="text-xs text-cyan-400">{epicGamesName}</p>
-                                                    ) : (
-                                                        <p className="text-xs text-gray-400">No conectado</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {epicGamesName ? (
-                                                <div className="flex gap-2">
-                                                    <a 
-                                                        href={`https://www.epicgames.com/site/${epicGamesName}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="px-3 py-1 text-xs bg-blue-600/50 hover:bg-blue-600 text-white rounded-md transition-colors"
-                                                    >
-                                                        Ver perfil
-                                                    </a>
-                                                    <Button
-                                                        onClick={() => handleDisconnectAccount('epic')}
-                                                        className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
-                                                    >
-                                                        Desconectar
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <Button
-                                                    onClick={() => window.location.href = `/api/auth/epic?userId=${user.id}`}
-                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]"
-                                                >
-                                                    Conectar
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        {/* Discord */}
-                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl">💬</span>
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">Discord</p>
-                                                    {discordUsername ? (
-                                                        <p className="text-xs text-cyan-400">{discordUsername}</p>
-                                                    ) : (
-                                                        <p className="text-xs text-gray-400">No conectado</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {discordUsername ? (
-                                                <Button
-                                                    onClick={() => handleDisconnectAccount('discord')}
-                                                    className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
-                                                >
-                                                    Desconectar
-                                                </Button>
-                                            ) : (
-                                                <Button
-                                                    onClick={() => window.location.href = `/api/auth/discord?userId=${user.id}`}
-                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
-                                                >
-                                                    Conectar
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        {/* Twitter */}
-                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl">🐦</span>
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">Twitter (X)</p>
-                                                    {twitterHandle ? (
-                                                        <p className="text-xs text-cyan-400">@{twitterHandle.replace('@', '')}</p>
-                                                    ) : (
-                                                        <p className="text-xs text-gray-400">No conectado</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {twitterHandle ? (
-                                                <div className="flex gap-2">
-                                                    <a 
-                                                        href={`https://twitter.com/${twitterHandle.replace('@', '')}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="px-3 py-1 text-xs bg-blue-600/50 hover:bg-blue-600 text-white rounded-md transition-colors"
-                                                    >
-                                                        Ver perfil
-                                                    </a>
-                                                    <Button
-                                                        onClick={() => handleDisconnectAccount('twitter')}
-                                                        className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
-                                                    >
-                                                        Desconectar
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <Button
-                                                    onClick={() => window.location.href = `/api/auth/twitter?userId=${user.id}`}
-                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-400 hover:to-blue-400 text-white shadow-[0_0_15px_rgba(14,165,233,0.4)]"
-                                                >
-                                                    Conectar
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        {/* Twitch */}
-                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl">📺</span>
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">Twitch</p>
-                                                    {twitchUsername ? (
-                                                        <p className="text-xs text-cyan-400">{twitchUsername}</p>
-                                                    ) : (
-                                                        <p className="text-xs text-gray-400">No conectado</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {twitchUsername ? (
-                                                <div className="flex gap-2">
-                                                    <a 
-                                                        href={`https://www.twitch.tv/${twitchUsername}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="px-3 py-1 text-xs bg-purple-600/50 hover:bg-purple-600 text-white rounded-md transition-colors"
-                                                    >
-                                                        Ver canal
-                                                    </a>
-                                                    <Button
-                                                        onClick={() => handleDisconnectAccount('twitch')}
-                                                        className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
-                                                    >
-                                                        Desconectar
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <Button
-                                                    onClick={() => window.location.href = `/api/auth/twitch?userId=${user.id}`}
-                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.4)]"
-                                                >
-                                                    Conectar
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        {/* TikTok */}
-                                        <div className="flex items-center justify-between p-4 bg-blue-950/30 border border-blue-500/20 rounded-lg hover:border-blue-500/40 transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl">🎵</span>
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">TikTok</p>
-                                                    {tiktokHandle ? (
-                                                        <p className="text-xs text-cyan-400">@{tiktokHandle.replace('@', '')}</p>
-                                                    ) : (
-                                                        <p className="text-xs text-gray-400">No conectado</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {tiktokHandle ? (
-                                                <div className="flex gap-2">
-                                                    <a 
-                                                        href={`https://www.tiktok.com/@${tiktokHandle.replace('@', '')}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="px-3 py-1 text-xs bg-pink-600/50 hover:bg-pink-600 text-white rounded-md transition-colors"
-                                                    >
-                                                        Ver perfil
-                                                    </a>
-                                                    <Button
-                                                        onClick={() => handleDisconnectAccount('tiktok')}
-                                                        className="px-3 py-1 h-auto text-xs bg-red-600/50 hover:bg-red-600 text-white"
-                                                    >
-                                                        Desconectar
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <Button
-                                                    onClick={() => window.location.href = `/api/auth/tiktok?userId=${user.id}`}
-                                                    className="px-4 py-2 h-auto text-sm bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white shadow-[0_0_15px_rgba(236,72,153,0.4)]"
-                                                >
-                                                    Conectar
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </Card>
                             </div>
                         )}
                     </div>
@@ -1309,6 +1177,14 @@ const Profile = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            <AvatarEditor
+                open={avatarEditorOpen}
+                onOpenChange={setAvatarEditorOpen}
+                userId={user?.id}
+                username={user?.username}
+                onSave={(newConfig) => setAvatarConfig(newConfig)}
+            />
         </div>
     );
 };

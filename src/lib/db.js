@@ -315,6 +315,11 @@ export const db = {
         winner:winner_id(id, username),
         moderator:moderator_id(id, username)
       `)
+
+      // Always exclude cancelled matches unless explicitly requested
+      if (!filters.includeCancelled) {
+        query = query.neq('status', 'cancelled')
+      }
       
       // Apply filters if provided
       if (filters.status) {
@@ -603,40 +608,76 @@ export const db = {
     return data
   },
 
-  leaveMatch: (matchId, playerId) => {
-    const matches = JSON.parse(localStorage.getItem('fortnite_matches') || '[]')
-    const matchIndex = matches.findIndex(m => m.id == matchId)
-    
-    if (matchIndex !== -1) {
-      const match = matches[matchIndex]
-      
-      // Si el jugador había marcado "listo", devolver los tokens
-      if (match.playersReady && match.playersReady[playerId]) {
-        const users = JSON.parse(localStorage.getItem('fortnite_platform_users') || '[]')
-        const userIndex = users.findIndex(u => u.id === playerId)
-        
-        if (userIndex !== -1) {
-          users[userIndex].tokens += match.entryFee
-          users[userIndex].totalPlayed = Math.max(0, (users[userIndex].totalPlayed || 0) - 1)
-          localStorage.setItem('fortnite_platform_users', JSON.stringify(users))
+  leaveMatch: async (matchId, playerId) => {
+    try {
+      console.log('=== LEAVING MATCH ===', matchId, playerId);
+
+      // Get the match from Supabase to check who's player1
+      const { data: match, error: fetchError } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('id', matchId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching match to leave:', fetchError);
+        throw fetchError;
+      }
+
+      if (!match) {
+        console.log('Match not found');
+        return;
+      }
+
+      // If the creator (player1) is leaving, cancel the match entirely
+      if (match.player1_id === playerId) {
+        console.log('Creator is leaving, cancelling match...');
+        const { error: cancelError } = await supabase
+          .from('matches')
+          .update({ status: 'cancelled' })
+          .eq('id', matchId);
+
+        if (cancelError) {
+          console.error('Error cancelling match:', cancelError);
+          throw cancelError;
         }
+        console.log('✅ Match cancelled because creator left');
+      } else if (match.player2_id === playerId) {
+        // Player 2 is leaving, just remove them from the match
+        console.log('Player 2 is leaving...');
+        const { error: updateError } = await supabase
+          .from('matches')
+          .update({ player2_id: null, player2_ready: false, status: 'pending' })
+          .eq('id', matchId);
+
+        if (updateError) {
+          console.error('Error removing player2:', updateError);
+          throw updateError;
+        }
+        console.log('✅ Player 2 removed from match');
       }
-      
-      match.players = match.players.filter(p => p.id !== playerId)
-      
-      // Remove from ready status
-      if (match.playersReady && match.playersReady[playerId]) {
-        delete match.playersReady[playerId]
-      }
-      
-      // If match becomes empty, delete it
-      if (match.players.length === 0) {
-        matches.splice(matchIndex, 1)
-      } else {
-        matches[matchIndex] = match
-      }
-      
-      localStorage.setItem('fortnite_matches', JSON.stringify(matches))
+
+      // Also clean up localStorage fallback
+      try {
+        const matches = JSON.parse(localStorage.getItem('fortnite_matches') || '[]');
+        const matchIndex = matches.findIndex(m => m.id == matchId);
+        if (matchIndex !== -1) {
+          matches.splice(matchIndex, 1);
+          localStorage.setItem('fortnite_matches', JSON.stringify(matches));
+        }
+      } catch (e) { /* ignore localStorage errors */ }
+
+    } catch (error) {
+      console.error('Error in leaveMatch:', error);
+      // Fallback: localStorage cleanup
+      try {
+        const matches = JSON.parse(localStorage.getItem('fortnite_matches') || '[]');
+        const matchIndex = matches.findIndex(m => m.id == matchId);
+        if (matchIndex !== -1) {
+          matches.splice(matchIndex, 1);
+          localStorage.setItem('fortnite_matches', JSON.stringify(matches));
+        }
+      } catch (e) { /* ignore */ }
     }
   },
 
@@ -1143,7 +1184,7 @@ export const db = {
           id: member.user.id,
           name: member.user.username,
           role: member.role === 'leader' ? 'Leader' : 'Member',
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.user.username}`
+          avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${member.user.username}`
         }))
       }))
     } catch (error) {
@@ -1182,7 +1223,7 @@ export const db = {
           id: Date.now(),
           name,
           members: [
-            { id: session.id, name: session.username, role: 'Leader', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + session.username }
+            { id: session.id, name: session.username, role: 'Leader', avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=' + session.username }
           ],
           wins: 0
         }
@@ -1211,7 +1252,7 @@ export const db = {
           id: session.id,
           name: session.username,
           role: 'Leader',
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.username}`
+          avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${session.username}`
         }]
       }
     } catch (error) {
@@ -1223,7 +1264,7 @@ export const db = {
         id: Date.now(),
         name,
         members: [
-          { id: session.id, name: session.username, role: 'Leader', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + session.username }
+          { id: session.id, name: session.username, role: 'Leader', avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=' + session.username }
         ],
         wins: 0
       }
@@ -2056,23 +2097,55 @@ export const db = {
         .order('created_at', { ascending: false })
         .limit(20)
 
+      let matches = [];
       if (error) {
         console.log('Using localStorage fallback for match history')
-        // Fallback to localStorage
-        const matches = JSON.parse(localStorage.getItem('fortnite_matches') || '[]')
-        return matches.filter(m => 
-          m.players && m.players.some(p => p.id === userId)
-        ).slice(0, 20)
+        matches = JSON.parse(localStorage.getItem('fortnite_matches') || '[]')
+          .filter(m => m.players && m.players.some(p => p.id === userId))
+          .slice(0, 20);
+      } else {
+        matches = data || [];
       }
 
-      return data || []
+      // Transformar matches al formato esperado por el historial
+      return matches.map(m => {
+        // Determinar oponente
+        let opponent = '';
+        if (m.player1 && m.player1.id !== userId) opponent = m.player1.username;
+        else if (m.player2 && m.player2.id !== userId) opponent = m.player2.username;
+        else opponent = '-';
+
+        // Determinar resultado
+        let result = '-';
+        if (m.winner_id && m.winner) {
+          result = m.winner.id === userId ? 'win' : 'lose';
+        }
+
+        return {
+          id: m.id,
+          date: m.created_at || m.date || new Date().toISOString(),
+          opponent,
+          type: m.match_type || m.type || '1v1',
+          mode: m.game_mode || m.mode || '-',
+          result,
+          prize: m.bet_amount ? (m.bet_amount / 100) * 1.9 : m.prize || 0
+        };
+      });
     } catch (error) {
       console.error('Error getting match history:', error)
       // Fallback to localStorage
       const matches = JSON.parse(localStorage.getItem('fortnite_matches') || '[]')
-      return matches.filter(m => 
-        m.players && m.players.some(p => p.id === userId)
-      ).slice(0, 20)
+        .filter(m => m.players && m.players.some(p => p.id === userId))
+        .slice(0, 20);
+      return matches.map(m => ({
+        id: m.id,
+        date: m.created_at || m.date || new Date().toISOString(),
+        opponent: '-',
+        type: m.match_type || m.type || '1v1',
+        mode: m.game_mode || m.mode || '-',
+        result: '-',
+        prize: m.bet_amount ? (m.bet_amount / 100) * 1.9 : m.prize || 0
+      }));
     }
   },
 
