@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { db } from '@/lib/db';
 import { Palette, User, Smile, Eye, Shirt, Crown } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import {
   SKIN_COLORS,
@@ -27,7 +30,7 @@ import {
 } from '@/lib/avatar-constants';
 
 // Devuelve solo valores válidos para DiceBear
-function sanitizeAvatarConfig(config) {
+export function sanitizeAvatarConfig(config) {
   const pick = (arr, v, def) => arr.some(x => x.id === v) ? v : def;
   return {
     ...config,
@@ -49,7 +52,7 @@ function sanitizeAvatarConfig(config) {
   };
 }
 
-const generateAvatarUrl = (rawConfig) => {
+export const generateAvatarUrl = (rawConfig) => {
   const config = sanitizeAvatarConfig(rawConfig);
   if (!config) return 'https://api.dicebear.com/9.x/avataaars/svg?seed=default';
   
@@ -113,25 +116,7 @@ const generateAvatarUrl = (rawConfig) => {
     if (config.accessoriesColor && accessoriesColorMap[config.accessoriesColor]) {
       url += `&accessoriesColor=${accessoriesColorMap[config.accessoriesColor]}`;
     }
-  } else {
-    url += `&accessoriesProbability=0`;
   }
-  
-  // Clothing
-  if (config.clothing) {
-    url += `&clothing=${config.clothing}`;
-  }
-  
-  // Clothing color - DiceBear 9.x uses 'clothesColor'
-  if (config.clothingColor && clothingColorMap[config.clothingColor]) {
-    url += `&clothesColor=${clothingColorMap[config.clothingColor]}`;
-  }
-  
-  // Clothing graphic (visible on graphicShirt)
-  if (config.clothing === 'graphicShirt' && config.clothingGraphic && config.clothingGraphic !== 'none') {
-    url += `&clothingGraphic=${config.clothingGraphic}`;
-  }
-  
   return url;
 };
 
@@ -140,14 +125,20 @@ const AvatarEditor = ({ open, onOpenChange, userId, username, onSave }) => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('skin');
   const [config, setConfig] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [step, setStep] = useState(undefined);
   
   useEffect(() => {
+    let timeoutId;
+    let finished = false;
     const loadConfig = async () => {
+      setLoadError(null);
       const safeUsername = username || "default";
       console.log("[AvatarEditor] loadConfig: userId=", userId, "username=", username);
       if (userId) {
         try {
           const savedConfig = await db.getAvatarConfig(userId);
+          if (finished) return;
           console.log("[AvatarEditor] savedConfig=", savedConfig);
           setConfig({
             ...db.getDefaultAvatarConfig(),
@@ -155,13 +146,16 @@ const AvatarEditor = ({ open, onOpenChange, userId, username, onSave }) => {
             seed: safeUsername
           });
         } catch (e) {
+          if (finished) return;
           console.error("[AvatarEditor] Error loading avatar config:", e);
           setConfig({
             ...db.getDefaultAvatarConfig(),
             seed: safeUsername
           });
+          setLoadError("No se pudo cargar tu avatar. Se usará el avatar por defecto.");
         }
       } else {
+        if (finished) return;
         setConfig({
           ...db.getDefaultAvatarConfig(),
           seed: safeUsername
@@ -169,14 +163,32 @@ const AvatarEditor = ({ open, onOpenChange, userId, username, onSave }) => {
       }
     };
     if (open) {
+      setStep(undefined);
+      timeoutId = setTimeout(() => {
+        finished = true;
+        setConfig({
+          ...db.getDefaultAvatarConfig(),
+          seed: username || "default"
+        });
+        setLoadError("La carga del avatar está tardando demasiado. Se usará el avatar por defecto.");
+      }, 2000);
       loadConfig().catch(e => {
+        if (finished) return;
         console.error("[AvatarEditor] loadConfig fatal error:", e);
         setConfig({
           ...db.getDefaultAvatarConfig(),
           seed: username || "default"
         });
+        setLoadError("Error fatal al cargar el avatar. Se usará el avatar por defecto.");
+      }).finally(() => {
+        clearTimeout(timeoutId);
+        finished = true;
       });
     }
+    return () => {
+      clearTimeout(timeoutId);
+      finished = true;
+    };
   }, [open, userId, username]);
   
   const handleChange = (key, value) => {
@@ -239,10 +251,12 @@ const AvatarEditor = ({ open, onOpenChange, userId, username, onSave }) => {
     });
   };
   
-  // Mostrar el modal siempre que open sea true, aunque config sea null
-  // Si config es null, mostrar un loader/spinner
-  
-  const tabs = [
+    // Mostrar el modal siempre que open sea true, aunque config sea null
+      <div className="flex flex-col gap-3 pt-6 border-t border-blue-500/20 mt-6">
+      {/* ...otros elementos... */}
+      </div>
+
+    const tabs = [
     { id: 'skin', label: 'Piel', icon: Palette },
     { id: 'hair', label: 'Pelo', icon: User },
     { id: 'face', label: 'Cara', icon: Smile },
@@ -251,201 +265,260 @@ const AvatarEditor = ({ open, onOpenChange, userId, username, onSave }) => {
     { id: 'accessories', label: 'Accesorios', icon: Crown }
   ];
   
-  const renderColorSelector = (options, currentValue, onChange, label) => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-blue-200">{label}</label>
-      <div className="flex flex-wrap gap-2">
-        {options.map(opt => (
-          <button
-            key={opt.id}
-            onClick={() => onChange(opt.id)}
-            className={`w-8 h-8 rounded-full border-2 transition-all ${
-              currentValue === opt.id 
-                ? 'border-cyan-400 scale-110 shadow-[0_0_10px_rgba(34,211,238,0.5)]' 
-                : 'border-blue-500/30 hover:border-blue-400/60'
-            }`}
-            style={{ backgroundColor: opt.color }}
-            title={opt.label}
-          />
-        ))}
-      </div>
-    </div>
-  );
-  
-  const renderStyleSelector = (options, currentValue, onChange, label) => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-blue-200">{label}</label>
-      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-        {options.map(opt => (
-          <button
-            key={opt.id}
-            onClick={() => onChange(opt.id)}
-            className={`px-3 py-2 text-xs rounded-lg border transition-all ${
-              currentValue === opt.id 
-                ? 'border-cyan-400 bg-cyan-500/20 text-white' 
-                : 'border-blue-500/30 bg-blue-950/30 text-blue-300 hover:border-blue-400/60 hover:bg-blue-900/30'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-  
+  // NUEVO DISEÑO MINIMALISTA Y MODERNO
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-950 border-blue-500/30 text-white max-w-2xl max-h-[90vh] overflow-hidden flex items-center justify-center min-h-[300px]">
+      <DialogContent className="bg-gradient-to-br from-blue-950 to-slate-900 text-white max-w-xl w-full min-h-[420px] rounded-2xl shadow-2xl flex flex-col items-center justify-center p-0">
         {!config ? (
-          <div className="flex flex-col items-center justify-center w-full h-full py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mb-4"></div>
-            <div className="text-cyan-300 text-lg font-bold">Cargando avatar...</div>
+          <div className="flex flex-col items-center justify-center w-full h-full py-16">
+            <div className="animate-spin rounded-full h-14 w-14 border-b-2 border-cyan-400 mb-6"></div>
+            <div className="text-cyan-300 text-xl font-bold">Cargando avatar...</div>
+            {loadError && (
+              <div className="mt-6 text-red-400 text-base font-bold">{loadError}</div>
+            )}
           </div>
         ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-xl">
-                <User className="h-5 w-5 text-cyan-400" />
-                Personalizar Avatar
-              </DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Preview */}
-              <div className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-950/50 to-slate-900/50 rounded-xl border border-blue-500/20">
-                <div className="relative">
-                  <img 
-                    key={JSON.stringify(config)}
-                    src={generateAvatarUrl(config)}
-                    alt="Avatar Preview"
-                    className="w-40 h-40 rounded-full border-4 border-cyan-500 shadow-[0_0_30px_rgba(34,211,238,0.4)] bg-slate-900"
-                    onError={e => { e.target.onerror = null; e.target.src = 'https://api.dicebear.com/9.x/avataaars/svg?seed=default'; }}
-                  />
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full text-xs font-bold">
-                    Preview
-                  </div>
-                </div>
-                <p className="mt-4 text-blue-300 text-sm text-center">
-                  Personaliza tu avatar con diferentes opciones
-                </p>
-                {/* DEBUG: Show generated URL for troubleshooting */}
-                <div className="mt-2 break-all text-xs text-cyan-300 bg-slate-800/80 p-2 rounded max-w-xs select-all">
-                  {generateAvatarUrl(config)}
-                </div>
-              </div>
-              {/* Options */}
-              <div className="space-y-4">
-                {/* Tabs */}
-                <div className="flex flex-wrap gap-1 p-1 bg-blue-950/50 rounded-lg">
-                  {tabs.map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
-                        activeTab === tab.id
-                          ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white'
-                          : 'text-blue-300 hover:bg-blue-900/30'
-                      }`}
-                    >
-                      <tab.icon className="h-3 w-3" />
-                      <span className="hidden sm:inline">{tab.label}</span>
-                    </button>
-                  ))}
-                </div>
-                {/* Content */}
-                <ScrollArea className="h-64 pr-4">
-                  <div className="space-y-4">
-                    {activeTab === 'skin' && (
-                      <>
-                        {renderColorSelector(SKIN_COLORS, config.skinColor, v => handleChange('skinColor', v), 'Color de Piel')}
-                      </>
-                    )}
-                    {activeTab === 'hair' && (
-                      <>
-                        {renderStyleSelector(HAIR_STYLES, config.hairStyle, v => handleChange('hairStyle', v), 'Estilo de Pelo')}
-                        {renderColorSelector(HAIR_COLORS, config.hairColor, v => handleChange('hairColor', v), 'Color de Pelo')}
-                        {renderStyleSelector(FACIAL_HAIR_STYLES, config.facialHair, v => handleChange('facialHair', v), 'Barba')}
-                        {config.facialHair && config.facialHair !== 'none' && (
-                          renderColorSelector(FACIAL_HAIR_COLORS, config.facialHairColor, v => handleChange('facialHairColor', v), 'Color de Barba')
-                        )}
-                      </>
-                    )}
-                    {activeTab === 'face' && (
-                      <>
-                        {renderStyleSelector(MOUTH_STYLES, config.mouth, v => handleChange('mouth', v), 'Boca')}
-                      </>
-                    )}
-                    {activeTab === 'eyes' && (
-                      <>
-                        {renderStyleSelector(EYES_STYLES, config.eyes, v => handleChange('eyes', v), 'Ojos')}
-                        {renderStyleSelector(EYEBROW_STYLES, config.eyebrows, v => handleChange('eyebrows', v), 'Cejas')}
-                      </>
-                    )}
-                    {activeTab === 'clothing' && (
-                      <>
-                        {renderStyleSelector(CLOTHING_STYLES, config.clothing, v => handleChange('clothing', v), 'Tipo de Ropa')}
-                        {renderColorSelector(CLOTHING_COLORS, config.clothingColor, v => handleChange('clothingColor', v), 'Color de Ropa')}
-                        {config.clothing === 'graphicShirt' && (
-                          renderStyleSelector(CLOTHING_GRAPHIC, config.clothingGraphic, v => handleChange('clothingGraphic', v), 'Gráfico de Camiseta')
-                        )}
-                      </>
-                    )}
-                    {activeTab === 'accessories' && (
-                      <>
-                        {renderStyleSelector(ACCESSORIES, config.accessories, v => handleChange('accessories', v), 'Gafas/Accesorios')}
-                        {config.accessories && config.accessories !== 'none' && (
-                          renderColorSelector(ACCESSORIES_COLORS, config.accessoriesColor, v => handleChange('accessoriesColor', v), 'Color de Accesorios')
-                        )}
-                        {renderStyleSelector(HAT_STYLES, config.hat, v => handleChange('hat', v), 'Sombrero/Gorra')}
-                        {config.hat && config.hat !== 'none' && (
-                          renderColorSelector(HAT_COLORS, config.hatColor, v => handleChange('hatColor', v), 'Color de Sombrero')
-                        )}
-                      </>
-                    )}
-                  </div>
-                </ScrollArea>
+          <div className="w-full flex flex-col md:flex-row">
+            {/* Vista previa avatar */}
+            <div className="flex flex-col items-center justify-center md:w-1/2 w-full p-8">
+              <img
+                key={JSON.stringify(config)}
+                src={generateAvatarUrl(config)}
+                alt="Avatar Preview"
+                className="w-36 h-36 rounded-full border-4 border-cyan-500 shadow-lg bg-slate-900"
+                onError={e => { e.target.onerror = null; e.target.src = 'https://api.dicebear.com/9.x/avataaars/svg?seed=default'; }}
+              />
+              <div className="mt-4 text-center">
+                <div className="text-cyan-400 font-bold text-lg">Vista previa</div>
+                <div className="text-blue-300 text-sm">Personaliza tu avatar</div>
               </div>
             </div>
-            {/* Actions */}
-            <div className="flex flex-col gap-2 pt-4 border-t border-blue-500/20">
-              <div className="flex gap-2 mb-2">
-                <Button
-                  variant="outline"
-                  onClick={handleReset}
-                  className="border-blue-500/30 text-blue-300 hover:bg-blue-950/30"
-                >
-                  Restablecer
-                </Button>
-                <div className="flex gap-1 flex-wrap">
-                  {avatarPresets.map((preset) => (
-                    <Button key={preset.name} variant="outline" className="border-blue-500/30 text-blue-300 hover:bg-blue-950/30 px-2 py-1 text-xs" onClick={() => handlePreset(preset)}>
-                      {preset.name}
-                    </Button>
-                  ))}
+            {/* Opciones avatar */}
+            <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6">
+              <div className="grid grid-cols-2 gap-4 w-full">
+                <button className="bg-cyan-900/60 rounded-xl py-4 text-lg font-bold text-cyan-200 hover:bg-cyan-800/80 transition" onClick={() => setStep('skin')}>Piel</button>
+                <button className="bg-cyan-900/60 rounded-xl py-4 text-lg font-bold text-cyan-200 hover:bg-cyan-800/80 transition" onClick={() => setStep('hair')}>Pelo</button>
+                <button className="bg-cyan-900/60 rounded-xl py-4 text-lg font-bold text-cyan-200 hover:bg-cyan-800/80 transition" onClick={() => setStep('face')}>Cara</button>
+                <button className="bg-cyan-900/60 rounded-xl py-4 text-lg font-bold text-cyan-200 hover:bg-cyan-800/80 transition" onClick={() => setStep('eyes')}>Ojos</button>
+                <button className="bg-cyan-900/60 rounded-xl py-4 text-lg font-bold text-cyan-200 hover:bg-cyan-800/80 transition" onClick={() => setStep('clothing')}>Ropa</button>
+                <button className="bg-cyan-900/60 rounded-xl py-4 text-lg font-bold text-cyan-200 hover:bg-cyan-800/80 transition" onClick={() => setStep('accessories')}>Accesorios</button>
+              </div>
+              {/* Paso de edición */}
+              {step && (
+                <div className="w-full mt-4 bg-blue-950/80 rounded-xl p-4 flex flex-col gap-4">
+                  <button className="mb-2 text-cyan-400 flex items-center gap-2 font-bold" onClick={() => setStep(undefined)}>
+                    <span className="material-icons">arrow_back</span> Volver
+                  </button>
+                  {step === 'skin' && (
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      {SKIN_COLORS.map(opt => (
+                        <button
+                          key={opt.id}
+                          className={`w-10 h-10 rounded-full border-4 ${config.skinColor === opt.id ? 'border-cyan-400 scale-110' : 'border-transparent'} transition-all`}
+                          style={{ background: opt.color }}
+                          onClick={() => handleChange('skinColor', opt.id)}
+                          aria-label={opt.label}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {step === 'hair' && (
+                    <>
+                      <div className="mb-2 text-cyan-300 font-semibold">Estilo</div>
+                      <div className="flex flex-col items-center">
+                        <div className="flex flex-wrap gap-2 justify-center mb-4 max-h-40 overflow-auto scrollbar-thin scrollbar-thumb-cyan-700 scrollbar-track-blue-950 pr-2 rounded-lg">
+                          {HAIR_STYLES.map(opt => (
+                            <button
+                              key={opt.id}
+                              className={`px-3 py-1 rounded-lg border ${config.hairStyle === opt.id ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-cyan-200'} text-sm font-medium transition`}
+                              onClick={() => handleChange('hairStyle', opt.id)}
+                            >{opt.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mb-2 text-cyan-300 font-semibold">Color</div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {HAIR_COLORS.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`w-8 h-8 rounded-full border-4 ${config.hairColor === opt.id ? 'border-cyan-400 scale-110' : 'border-transparent'} transition-all`}
+                            style={{ background: opt.color }}
+                            onClick={() => handleChange('hairColor', opt.id)}
+                            aria-label={opt.label}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {step === 'face' && (
+                    <>
+                      <div className="mb-2 text-cyan-300 font-semibold">Boca</div>
+                      <div className="flex flex-wrap gap-2 justify-center mb-4">
+                        {MOUTH_STYLES.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`px-3 py-1 rounded-lg border ${config.mouth === opt.id ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-cyan-200'} text-sm font-medium transition`}
+                            onClick={() => handleChange('mouth', opt.id)}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
+                      <div className="mb-2 text-cyan-300 font-semibold">Barba/Bigote</div>
+                      <div className="flex flex-wrap gap-2 justify-center mb-2">
+                        {FACIAL_HAIR_STYLES.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`px-3 py-1 rounded-lg border ${config.facialHair === opt.id ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-cyan-200'} text-sm font-medium transition`}
+                            onClick={() => handleChange('facialHair', opt.id)}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
+                      {config.facialHair !== 'none' && (
+                        <div className="mb-2 text-cyan-300 font-semibold">Color Barba</div>
+                      )}
+                      {config.facialHair !== 'none' && (
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {FACIAL_HAIR_COLORS.map(opt => (
+                            <button
+                              key={opt.id}
+                              className={`w-8 h-8 rounded-full border-4 ${config.facialHairColor === opt.id ? 'border-cyan-400 scale-110' : 'border-transparent'} transition-all`}
+                              style={{ background: opt.color }}
+                              onClick={() => handleChange('facialHairColor', opt.id)}
+                              aria-label={opt.label}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {step === 'eyes' && (
+                    <>
+                      <div className="mb-2 text-cyan-300 font-semibold">Ojos</div>
+                      <div className="flex flex-wrap gap-2 justify-center mb-4">
+                        {EYES_STYLES.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`px-3 py-1 rounded-lg border ${config.eyes === opt.id ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-cyan-200'} text-sm font-medium transition`}
+                            onClick={() => handleChange('eyes', opt.id)}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
+                      <div className="mb-2 text-cyan-300 font-semibold">Cejas</div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {EYEBROW_STYLES.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`px-3 py-1 rounded-lg border ${config.eyebrows === opt.id ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-cyan-200'} text-sm font-medium transition`}
+                            onClick={() => handleChange('eyebrows', opt.id)}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {step === 'clothing' && (
+                    <>
+                      <div className="mb-2 text-cyan-300 font-semibold">Ropa</div>
+                      <div className="flex flex-col items-center">
+                        <div className="flex flex-wrap gap-2 justify-center mb-4 max-h-32 overflow-auto scrollbar-thin scrollbar-thumb-cyan-700 scrollbar-track-blue-950 pr-2 rounded-lg">
+                          {CLOTHING_STYLES.map(opt => (
+                            <button
+                              key={opt.id}
+                              className={`px-3 py-1 rounded-lg border ${config.clothing === opt.id ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-cyan-200'} text-sm font-medium transition`}
+                              onClick={() => handleChange('clothing', opt.id)}
+                            >{opt.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mb-2 text-cyan-300 font-semibold">Color</div>
+                      <div className="flex flex-wrap gap-2 justify-center mb-4">
+                        {CLOTHING_COLORS.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`w-8 h-8 rounded-full border-4 ${config.clothingColor === opt.id ? 'border-cyan-400 scale-110' : 'border-transparent'} transition-all`}
+                            style={{ background: opt.color }}
+                            onClick={() => handleChange('clothingColor', opt.id)}
+                            aria-label={opt.label}
+                          />
+                        ))}
+                      </div>
+                      <div className="mb-2 text-cyan-300 font-semibold">Gráfico</div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {CLOTHING_GRAPHIC.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`px-3 py-1 rounded-lg border ${config.clothingGraphic === opt.id ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-cyan-200'} text-sm font-medium transition`}
+                            onClick={() => handleChange('clothingGraphic', opt.id)}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {step === 'accessories' && (
+                    <>
+                      <div className="mb-2 text-cyan-300 font-semibold">Accesorios</div>
+                      <div className="flex flex-wrap gap-2 justify-center mb-4">
+                        {ACCESSORIES.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`px-3 py-1 rounded-lg border ${config.accessories === opt.id ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-cyan-200'} text-sm font-medium transition`}
+                            onClick={() => handleChange('accessories', opt.id)}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
+                      <div className="mb-2 text-cyan-300 font-semibold">Color Accesorio</div>
+                      <div className="flex flex-wrap gap-2 justify-center mb-4">
+                        {ACCESSORIES_COLORS.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`w-8 h-8 rounded-full border-4 ${config.accessoriesColor === opt.id ? 'border-cyan-400 scale-110' : 'border-transparent'} transition-all`}
+                            style={{ background: opt.color }}
+                            onClick={() => handleChange('accessoriesColor', opt.id)}
+                            aria-label={opt.label}
+                          />
+                        ))}
+                      </div>
+                      <div className="mb-2 text-cyan-300 font-semibold">Sombrero</div>
+                      <div className="flex flex-wrap gap-2 justify-center mb-4">
+                        {HAT_STYLES.map(opt => (
+                          <button
+                            key={opt.id}
+                            className={`px-3 py-1 rounded-lg border ${config.hat === opt.id ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-slate-700 text-cyan-200'} text-sm font-medium transition`}
+                            onClick={() => handleChange('hat', opt.id)}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
+                      {config.hat !== 'none' && (
+                        <>
+                          <div className="mb-2 text-cyan-300 font-semibold">Color Sombrero</div>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {HAT_COLORS.map(opt => (
+                              <button
+                                key={opt.id}
+                                className={`w-8 h-8 rounded-full border-4 ${config.hatColor === opt.id ? 'border-cyan-400 scale-110' : 'border-transparent'} transition-all`}
+                                style={{ background: opt.color }}
+                                onClick={() => handleChange('hatColor', opt.id)}
+                                aria-label={opt.label}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="border-blue-500/30 text-blue-300 hover:bg-blue-950/30"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"
-                >
-                  {saving ? 'Guardando...' : 'Guardar Avatar'}
-                </Button>
-              </div>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full mt-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 rounded-xl text-lg shadow-lg border-2 border-cyan-400 transition"
+              >
+                {saving ? 'Guardando...' : 'Guardar Avatar'}
+              </button>
             </div>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
   );
-};
+}
 
-export { generateAvatarUrl, sanitizeAvatarConfig };
 export default AvatarEditor;
